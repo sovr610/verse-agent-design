@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Hollow Creek Trading Post</title>
+  <link rel="stylesheet" href="../css/pipboy.css">
+  <script src="../js/pipboy.js" defer></script>
+  <style>
+    /* Layout: slim top bar, compact intro, then stock / item / barter columns. */
+
+    .tp-top { border-bottom: var(--line) solid var(--phos-low); padding-block: var(--s-2); }
+    .tp-top__inner {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--s-2) var(--s-4);
+    }
+    .tp-top__name { font: 400 var(--t-24)/1 var(--font-term); color: var(--phos-hi); }
+    .tp-top__tools {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--s-2) var(--s-4);
+      font-size: var(--t-16);
+    }
+
+    .tp-main { display: grid; gap: var(--s-6); padding-block: var(--s-6) var(--s-8); }
+
+    .tp-intro {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: var(--s-4) var(--s-6);
+    }
+    .tp-intro__text { display: grid; gap: var(--s-2); min-width: 0; }
+    .tp-intro h1 { font-size: clamp(var(--t-36), 5.5vw, var(--t-60)); }
+    .tp-intro__text p { color: var(--phos-dim); }
+    .tp-status abbr { text-decoration: none; }
+
+    .tp-shop {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1fr);
+      gap: var(--s-6);
+      align-items: start;
+    }
+    @media (max-width: 64rem) {
+      .tp-shop { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+      .tp-barter { grid-column: 1 / -1; }
+    }
+    @media (max-width: 40rem) {
+      .tp-shop { grid-template-columns: minmax(0, 1fr); }
+    }
+
+    /* Stock column */
+    .tp-stock { display: grid; gap: var(--s-3); min-width: 0; }
+    .tp-stock .pip-tabs > [role="tab"] { font-size: var(--t-16); padding-inline: .7rem; }
+    .tp-panel { display: grid; gap: var(--s-2); }
+    .tp-listhead {
+      display: flex;
+      justify-content: space-between;
+      padding: 0 .6em;
+      font: 700 var(--t-12)/1.4 var(--font-ui);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--phos-dim);
+    }
+    .tp-opt__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pip-list > [data-soldout]:not([aria-selected="true"]) { color: var(--phos-low); }
+    .tp-legend__mark { display: inline-block; width: .5em; height: .5em; margin-right: .5em; background: currentColor; }
+
+    /* Item column */
+    .tp-detail { display: grid; gap: var(--s-4); align-content: start; min-width: 0; }
+    .tp-detail__name { color: var(--phos-hi); }
+    .tp-detail__desc { color: var(--phos-dim); }
+    .pip-readout > .tp-yours { box-shadow: inset 3px 0 0 var(--phos); }
+    .pip-readout > .tp-yours dd { color: var(--phos-hi); }
+    .tp-diff { font: 400 var(--t-14)/1 var(--font-ui); }
+    .tp-qty { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-4); }
+    .tp-addrow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-4); }
+
+    /* Barter column */
+    .tp-barter { min-width: 0; }
+    .tp-barter__inner { display: grid; gap: var(--s-4); }
+    .tp-cart { display: grid; gap: var(--gap); margin: 0; padding: 0; list-style: none; }
+    .tp-line {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto auto;
+      align-items: center;
+      gap: var(--s-3);
+      padding: .2em .2em .2em .7em;
+      background: var(--phos-wash);
+      font-size: var(--t-16);
+      font-variant-numeric: tabular-nums;
+    }
+    .tp-line__name { min-width: 0; overflow-wrap: anywhere; }
+    .tp-line__qty { color: var(--phos-dim); }
+    .tp-empty:focus { outline: none; }
+    .tp-empty:focus-visible { outline: 2px solid var(--phos); outline-offset: 3px; }
+
+    .tp-cha {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: var(--s-1) var(--s-3);
+    }
+    .tp-cha .pip-field__help { grid-column: 1 / -1; }
+
+    .tp-total {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--s-2) var(--s-3);
+      padding-top: var(--s-3);
+      border-top: var(--line) solid var(--phos-low);
+    }
+    .tp-total__label {
+      font: 700 var(--t-14)/1.2 var(--font-ui);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--phos-dim);
+    }
+    .tp-total__value {
+      font: 400 var(--t-60)/.85 var(--font-term);
+      color: var(--phos-hi);
+      font-variant-numeric: tabular-nums;
+    }
+    .tp-total__unit { font-size: var(--t-24); color: var(--phos-dim); }
+
+    .tp-over .pip-meter__fill { background: var(--hazard); box-shadow: 0 0 .6rem var(--glow-hazard); }
+
+    .tp-trade { width: 100%; min-height: 3rem; font-size: var(--t-18); }
+    /* The library's hold-hover fill would otherwise light up a disabled button. */
+    .tp-trade:disabled:hover,
+    .tp-trade:disabled:focus-visible {
+      border-color: var(--phos-low);
+      background: transparent;
+      color: var(--phos-low);
+      text-shadow: none;
+    }
+    .tp-tradebox { display: grid; gap: var(--s-2); }
+
+    .tp-foot { padding-block: var(--s-5); border-top: var(--line) solid var(--phos-low); color: var(--phos-dim); font-size: var(--t-14); }
+  </style>
+</head>
+<body class="pip pip-page">
+
+  <header class="tp-top">
+    <div class="pip-container tp-top__inner">
+      <p class="tp-top__name">Hollow Creek</p>
+      <div class="tp-top__tools">
+        <div class="pip-segmented" role="radiogroup" aria-label="Screen tube" data-pip-phosphor-switch>
+          <button type="button" role="radio" value="p1" data-phosphor="p1">P1</button>
+          <button type="button" role="radio" value="p3" data-phosphor="p3">P3</button>
+          <button type="button" role="radio" value="p4" data-phosphor="p4">P4</button>
+          <button type="button" role="radio" value="p7" data-phosphor="p7">P7</button>
+        </div>
+        <a href="../index.html">Back to the kit</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="pip-container tp-main" id="top">
+
+    <section class="tp-intro" aria-labelledby="tp-title">
+      <div class="tp-intro__text">
+        <h1 id="tp-title">Hollow Creek Trading Post</h1>
+        <p>Open dawn to dusk. Caps only, no credit. Every weapon on the shelf has been test-fired.</p>
+      </div>
+      <div class="pip-bar tp-status" role="group" aria-label="Your status">
+        <span class="pip-bar__cell">Caps <span id="tp-st-caps">1,280</span></span>
+        <span class="pip-bar__cell"><abbr title="Carry weight">WG</abbr> <span id="tp-st-wg">142/235</span></span>
+        <span class="pip-bar__cell"><abbr title="Charisma">CHA</abbr> <span id="tp-st-cha">5</span></span>
+      </div>
+    </section>
+
+    <div class="tp-shop">
+
+      <!-- Stock -->
+      <section class="tp-stock" aria-label="Stock">
+        <nav class="pip-tabs" role="tablist" aria-label="Stock categories" data-pip-tabs>
+          <button type="button" role="tab" id="tp-tab-weapons" aria-controls="tp-panel-weapons" aria-selected="true" data-cat="weapons">Weapons</button>
+          <button type="button" role="tab" id="tp-tab-apparel" aria-controls="tp-panel-apparel" data-cat="apparel">Apparel</button>
+          <button type="button" role="tab" id="tp-tab-aid" aria-controls="tp-panel-aid" data-cat="aid">Aid</button>
+          <button type="button" role="tab" id="tp-tab-junk" aria-controls="tp-panel-junk" data-cat="junk">Junk</button>
+          <button type="button" role="tab" id="tp-tab-ammo" aria-controls="tp-panel-ammo" data-cat="ammo">Ammo</button>
+        </nav>
+
+        <div class="tp-panel" role="tabpanel" id="tp-panel-weapons" aria-labelledby="tp-tab-weapons">
+          <div class="tp-listhead" aria-hidden="true"><span>Item (on shelf)</span><span>Caps</span></div>
+          <ul class="pip-list" role="listbox" aria-label="Weapons for sale" id="tp-list-weapons" data-pip-list></ul>
+        </div>
+        <div class="tp-panel" role="tabpanel" id="tp-panel-apparel" aria-labelledby="tp-tab-apparel" hidden>
+          <div class="tp-listhead" aria-hidden="true"><span>Item (on shelf)</span><span>Caps</span></div>
+          <ul class="pip-list" role="listbox" aria-label="Apparel for sale" id="tp-list-apparel" data-pip-list></ul>
+        </div>
+        <div class="tp-panel" role="tabpanel" id="tp-panel-aid" aria-labelledby="tp-tab-aid" hidden>
+          <div class="tp-listhead" aria-hidden="true"><span>Item (on shelf)</span><span>Caps</span></div>
+          <ul class="pip-list" role="listbox" aria-label="Aid for sale" id="tp-list-aid" data-pip-list></ul>
+        </div>
+        <div class="tp-panel" role="tabpanel" id="tp-panel-junk" aria-labelledby="tp-tab-junk" hidden>
+          <div class="tp-listhead" aria-hidden="true"><span>Item (on shelf)</span><span>Caps</span></div>
+          <ul class="pip-list" role="listbox" aria-label="Junk for sale" id="tp-list-junk" data-pip-list></ul>
+        </div>
+        <div class="tp-panel" role="tabpanel" id="tp-panel-ammo" aria-labelledby="tp-tab-ammo" hidden>
+          <div class="tp-listhead" aria-hidden="true"><span>Item (boxes on shelf)</span><span>Caps</span></div>
+          <ul class="pip-list" role="listbox" aria-label="Ammunition for sale" id="tp-list-ammo" data-pip-list></ul>
+        </div>
+
+        <p class="pip-field__help tp-legend"><span class="tp-legend__mark" aria-hidden="true"></span>Marks items already on the counter. Press <kbd>E</kbd> in the list to add the highlighted item.</p>
+      </section>
+
+      <!-- Selected item -->
+      <section class="tp-detail" id="tp-detail" aria-label="Selected item"></section>
+
+      <!-- Barter -->
+      <section class="pip-panel tp-barter" aria-labelledby="tp-barter-title">
+        <h2 class="pip-panel__title" id="tp-barter-title">Barter</h2>
+        <div class="tp-barter__inner">
+
+          <ul class="tp-cart" id="tp-cart" aria-label="On the counter" hidden></ul>
+          <div class="pip-empty tp-empty" id="tp-empty" tabindex="-1">
+            <p>Nothing on the counter yet. Pick an item and press Add to barter.</p>
+          </div>
+
+          <div class="tp-cha">
+            <span class="pip-field__label" id="tp-cha-label">Charisma</span>
+            <div class="pip-stepper" role="group" aria-labelledby="tp-cha-label" id="tp-cha" data-pip-stepper data-min="1" data-max="10" data-value="5">
+              <button type="button" class="pip-arrow" aria-label="Lower Charisma"></button>
+              <output aria-live="polite">5</output>
+              <button type="button" class="pip-arrow pip-arrow--next" aria-label="Raise Charisma"></button>
+            </div>
+            <p class="pip-field__help">Your Charisma sets the price the trader asks. Every price on this screen follows it.</p>
+          </div>
+
+          <div class="tp-total">
+            <span class="tp-total__label" id="tp-cost-label">Total cost</span>
+            <span class="tp-total__value"><span id="tp-cost">0</span> <span class="tp-total__unit">caps</span></span>
+          </div>
+
+          <dl class="pip-readout">
+            <div><dt>Caps after trade</dt><dd id="tp-after">1,280</dd></div>
+            <div><dt>Weight added</dt><dd id="tp-wadd">0 lb</dd></div>
+          </dl>
+
+          <div class="pip-meter" role="meter" id="tp-carry" aria-label="Carry weight after trade" aria-valuemin="0" aria-valuemax="235" aria-valuenow="142">
+            <span class="pip-meter__label">Carry</span>
+            <span class="pip-meter__track"><span class="pip-meter__fill"></span></span>
+            <span class="pip-meter__value" id="tp-carry-text">142/235 lb</span>
+          </div>
+
+          <div class="pip-alert pip-alert--caution" id="tp-heavy" hidden>
+            <span class="pip-alert__icon" aria-hidden="true">!</span>
+            <p class="pip-alert__title">Over-encumbered</p>
+            <p class="pip-alert__body" id="tp-heavy-body"></p>
+          </div>
+
+          <div class="pip-alert" id="tp-short" hidden>
+            <span class="pip-alert__icon" aria-hidden="true">$</span>
+            <p class="pip-alert__title">Not enough caps</p>
+            <p class="pip-alert__body" id="tp-short-body"></p>
+          </div>
+
+          <div class="tp-tradebox">
+            <button type="button" class="pip-btn pip-btn--hold tp-trade" id="tp-trade" data-pip-hold="900" aria-describedby="tp-trade-note" disabled>Hold to trade</button>
+            <p class="pip-field__help" id="tp-trade-note">Add something to the counter first.</p>
+          </div>
+
+        </div>
+      </section>
+
+    </div>
+
+    <p class="pip-sr" id="tp-live" aria-live="polite"></p>
+  </main>
+
+  <footer class="tp-foot">
+    <div class="pip-container">Hollow Creek settlement, 2287. Built with the Pip-OS Interface Kit.</div>
+  </footer>
+
+  <script>
+    /**
+     * barterPrice: what the trader charges for one unit.
+     * @param {number} baseValue  listed value in caps (integer, > 0)
+     * @param {number} charisma   buyer's Charisma, 1 to 10
+     * @returns {number}          caps per unit (integer)
+     *
+     * TODO(you): decide how Charisma bends the price. Things to weigh:
+     *  - Should a Charisma 10 buyer ever pay less than the listed value?
+     *  - Linear (each point the same) or diminishing returns?
+     *  - Round up, down or to nearest? Never return 0 for a 1-cap item.
+     */
+    function barterPrice(baseValue, charisma) {
+      // TODO: replace this pass-through with your pricing rule (5 to 10 lines).
+      return baseValue;
+    }
+
+    /* Shop data ------------------------------------------------------------ */
+
+    const CATEGORIES = [
+      { id: "weapons", stack: false },
+      { id: "apparel", stack: false },
+      { id: "aid", stack: true },
+      { id: "junk", stack: true },
+      { id: "ammo", stack: true },
+    ];
+
+    const STOCK = {
+      weapons: [
+        { id: "pistol-10mm", name: "10mm Pistol", qty: 2, value: 53, weight: 4.2,
+          desc: "A reliable sidearm that takes common 10mm rounds. Easy to keep running with parts from any other 10mm pistol.",
+          stats: [["Damage", "18"], ["Fire rate", "46"], ["Range", "83"], ["Ammo", "10mm"]] },
+        { id: "hunting-rifle", name: "Hunting Rifle", qty: 1, value: 148, weight: 11,
+          desc: "Bolt-action and slow to cycle, but it hits hard at long range. Chambered for .308.",
+          stats: [["Damage", "38"], ["Fire rate", "6"], ["Range", "119"], ["Ammo", ".308"]] },
+        { id: "pipe-revolver", name: "Pipe Revolver", qty: 3, value: 30, weight: 4.8,
+          desc: "Built from plumbing and spare parts. Cheap to feed on .38 rounds; expect the cylinder to stick.",
+          stats: [["Damage", "24"], ["Fire rate", "6"], ["Range", "83"], ["Ammo", ".38"]] },
+        { id: "combat-knife", name: "Combat Knife", qty: 4, value: 25, weight: 1,
+          desc: "A balanced blade that's quiet, light and never needs ammunition.",
+          stats: [["Damage", "12"], ["Speed", "Fast"], ["Range", "Melee"], ["Ammo", "None"]] },
+        { id: "laser-pistol", name: "Laser Pistol", qty: 1, value: 210, weight: 3.5,
+          desc: "Pre-war energy sidearm. Runs on fusion cells and never needs cleaning.",
+          stats: [["Damage", "18"], ["Fire rate", "40"], ["Range", "84"], ["Ammo", "Fusion cell"]] },
+        { id: "sledgehammer", name: "Sledgehammer", qty: 1, value: 40, weight: 12,
+          desc: "Heavy and slow. Good for walls, locks and anyone standing near them.",
+          stats: [["Damage", "32"], ["Speed", "Slow"], ["Range", "Melee"], ["Ammo", "None"]] },
+      ],
+      apparel: [
+        { id: "road-leathers", name: "Road Leathers", qty: 2, value: 45, weight: 4,
+          desc: "Patched leather duster and trousers. Warm, and tough enough to turn a pipe-gun round.",
+          stats: [["Damage resistance", "15"], ["Energy resistance", "15"], ["Rad resistance", "0"], ["Covers", "Body"]] },
+        { id: "gas-mask", name: "Gas Mask", qty: 3, value: 30, weight: 2,
+          desc: "Filters most airborne contamination. Wear it near the craters and the old chemical plant.",
+          stats: [["Damage resistance", "0"], ["Energy resistance", "0"], ["Rad resistance", "15"], ["Covers", "Face"]] },
+        { id: "patrol-cap", name: "Patrol Cap", qty: 5, value: 12, weight: 0.5,
+          desc: "Keeps the sun out of your eyes. That's about all it does.",
+          stats: [["Damage resistance", "2"], ["Energy resistance", "2"], ["Rad resistance", "0"], ["Covers", "Head"]] },
+        { id: "leather-chest", name: "Leather Chest Piece", qty: 2, value: 35, weight: 5,
+          desc: "Boiled leather plate that straps over a jumpsuit or road clothes.",
+          stats: [["Damage resistance", "12"], ["Energy resistance", "8"], ["Rad resistance", "0"], ["Covers", "Chest"]] },
+        { id: "v59-jumpsuit", name: "Vault 59 Jumpsuit", qty: 1, value: 20, weight: 1,
+          desc: "Blue and gold, never worn. The collar tag says it was issued to resident 0412.",
+          stats: [["Damage resistance", "1"], ["Energy resistance", "1"], ["Rad resistance", "10"], ["Covers", "Body"]] },
+        { id: "raincoat", name: "Raincoat", qty: 2, value: 18, weight: 2,
+          desc: "Waxed canvas that keeps off the rain, which out here sometimes glows.",
+          stats: [["Damage resistance", "3"], ["Energy resistance", "3"], ["Rad resistance", "5"], ["Covers", "Body"]] },
+      ],
+      aid: [
+        { id: "stimpak", name: "Stimpak", qty: 9, value: 75, weight: 0.1,
+          desc: "Heals wounds in seconds. Use it before the fight goes bad, not after.",
+          stats: [["Effect", "Restores 30% HP"], ["Rads", "None"]] },
+        { id: "radaway", name: "RadAway", qty: 4, value: 80, weight: 0.1,
+          desc: "An IV bag that flushes radiation out of your blood. You'll feel weak for a few minutes.",
+          stats: [["Effect", "Clears radiation"], ["Rads", "−300"]] },
+        { id: "rad-x", name: "Rad-X", qty: 6, value: 40, weight: 0.1,
+          desc: "Take it before you walk into a hot zone, not once you're already in one.",
+          stats: [["Effect", "+100 rad resistance, 4 min"], ["Rads", "None"]] },
+        { id: "purified-water", name: "Purified Water", qty: 12, value: 20, weight: 0.5,
+          desc: "Boiled and filtered at the Hollow Creek pump house. No rads.",
+          stats: [["Effect", "Restores 20 HP"], ["Rads", "None"]] },
+        { id: "cram", name: "Cram", qty: 7, value: 25, weight: 0.5,
+          desc: "Pre-war canned meat. Salty, fatty and somehow still edible.",
+          stats: [["Effect", "Restores 25 HP"], ["Rads", "+5"]] },
+        { id: "rat-jerky", name: "Smoked Rat Jerky", qty: 15, value: 8, weight: 0.2,
+          desc: "Local recipe. Tastes better than it sounds.",
+          stats: [["Effect", "Restores 15 HP"], ["Rads", "+2"]] },
+      ],
+      junk: [
+        { id: "copper-wire", name: "Copper Wire", qty: 20, value: 6, weight: 0.2,
+          desc: "Stripped from the walls of the old subdivision. Every power line in the settlement needs it.",
+          stats: [["Scraps into", "Copper ×2"]] },
+        { id: "duct-tape", name: "Duct Tape", qty: 6, value: 10, weight: 0.5,
+          desc: "Holds armor, pipes and most repairs together.",
+          stats: [["Scraps into", "Adhesive ×1, Cloth ×1"]] },
+        { id: "desk-fan", name: "Desk Fan", qty: 3, value: 12, weight: 4,
+          desc: "Doesn't spin, but the gears and screws inside are worth having.",
+          stats: [["Scraps into", "Gears ×2, Screws ×1, Steel ×3"]] },
+        { id: "aluminum-can", name: "Aluminum Can", qty: 40, value: 1, weight: 0.1,
+          desc: "Empty and crushed. Melt down enough of them and you can patch a water tank.",
+          stats: [["Scraps into", "Aluminum ×1"]] },
+        { id: "toy-rocket", name: "Toy Rocket", qty: 2, value: 8, weight: 1,
+          desc: "A tin rocket with a wind-up key. Kids love it, and so do scrappers.",
+          stats: [["Scraps into", "Steel ×2, Springs ×1"]] },
+        { id: "circuit-board", name: "Circuit Board", qty: 3, value: 30, weight: 1,
+          desc: "Pulled from a terminal that wasn't coming back. Needed for turrets and radio beacons.",
+          stats: [["Scraps into", "Circuitry ×2, Gold ×1"]] },
+      ],
+      ammo: [
+        { id: "ammo-38", name: ".38 Round", qty: 8, value: 25, weight: 0.5,
+          desc: "Cheap, common and loud. Feeds most pipe guns.",
+          stats: [["Sold as", "Box of 25"], ["Used by", "Pipe guns"]] },
+        { id: "ammo-10mm", name: "10mm Round", qty: 6, value: 40, weight: 0.6,
+          desc: "Standard sidearm ammunition. Reloaded here at the post.",
+          stats: [["Sold as", "Box of 20"], ["Used by", "10mm pistols"]] },
+        { id: "ammo-shell", name: "Shotgun Shell", qty: 5, value: 36, weight: 1,
+          desc: "Hand-packed buckshot. Best inside ten paces.",
+          stats: [["Sold as", "Box of 12"], ["Used by", "Shotguns"]] },
+        { id: "ammo-fusion", name: "Fusion Cell", qty: 4, value: 60, weight: 0.6,
+          desc: "Recharged on the settlement generator. Each box holds thirty full charges.",
+          stats: [["Sold as", "Box of 30"], ["Used by", "Laser weapons"]] },
+        { id: "ammo-308", name: ".308 Round", qty: 5, value: 45, weight: 0.6,
+          desc: "Rifle rounds for long shots.",
+          stats: [["Sold as", "Box of 10"], ["Used by", "Hunting rifles"]] },
+        { id: "ammo-fuel", name: "Flamer Fuel", qty: 2, value: 50, weight: 2,
+          desc: "Jellied fuel in a sealed can. Keep it away from the stove.",
+          stats: [["Sold as", "Can of 50"], ["Used by", "Flamers"]] },
+      ],
+    };
+
+    /* State ---------------------------------------------------------------- */
+
+    const player = { caps: 1280, weight: 142, capacity: 235, charisma: 5 };
+    const cart = new Map();                     // item id -> quantity
+    const state = { cat: "weapons", selected: {}, qty: 1 };
+    const byId = new Map();                     // item id -> { item, cat }
+    CATEGORIES.forEach((cat) => STOCK[cat.id].forEach((item) => byId.set(item.id, { item, cat })));
+
+    const fmt = (n) => n.toLocaleString("en-US");
+    const fmtWt = (w) => (Math.round(w * 10) / 10).toLocaleString("en-US", { maximumFractionDigits: 1 });
+    const unitPrice = (item) => barterPrice(item.value, player.charisma);
+    const inCart = (item) => cart.get(item.id) || 0;
+    const available = (item) => item.qty - inCart(item);
+    const current = () => byId.get(state.selected[state.cat]).item;
+    const currentCat = () => CATEGORIES.find((c) => c.id === state.cat);
+    const $ = (id) => document.getElementById(id);
+
+    function cartTotals() {
+      let cost = 0, weight = 0, count = 0;
+      cart.forEach((qty, id) => {
+        const { item } = byId.get(id);
+        cost += unitPrice(item) * qty;
+        weight += item.weight * qty;
+        count += qty;
+      });
+      return { cost, weight, count };
+    }
+
+    function announce(text) { $("tp-live").textContent = text; }
+
+    // Focus survives a re-render when the new markup reuses the same id.
+    function keepFocus(container, render) {
+      const id = container.contains(document.activeElement) ? document.activeElement.id : "";
+      render();
+      if (!id) return;
+      const el = $(id);
+      if (el && !el.disabled) el.focus();
+      else selectedOption()?.focus();
+    }
+
+    function selectedOption() {
+      return document.querySelector(`#tp-list-${state.cat} [aria-selected="true"]`);
+    }
+
+    /* Rendering ------------------------------------------------------------ */
+
+    // Lists are built once, before pipboy.js initialises them.
+    CATEGORIES.forEach((cat) => {
+      const items = STOCK[cat.id];
+      state.selected[cat.id] = items[0].id;
+      $("tp-list-" + cat.id).innerHTML = items.map((item, i) => `
+        <li role="option" id="tp-opt-${item.id}" data-id="${item.id}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}">
+          <span class="pip-list__mark" aria-hidden="true"></span>
+          <span class="tp-opt__name">${item.name}</span>
+          <span class="pip-list__qty"></span>
+          <span class="pip-list__meta"></span>
+        </li>`).join("");
+    });
+
+    function updateLists() {
+      byId.forEach(({ item }) => {
+        const li = $("tp-opt-" + item.id);
+        const avail = available(item);
+        const price = unitPrice(item);
+        const onCounter = inCart(item);
+        li.querySelector(".pip-list__qty").textContent = `(${avail})`;
+        li.querySelector(".pip-list__meta").textContent = fmt(price);
+        li.toggleAttribute("data-equipped", onCounter > 0);
+        li.toggleAttribute("data-soldout", avail === 0);
+        li.setAttribute("aria-label",
+          `${item.name}, ${avail} on the shelf, ${fmt(price)} caps` + (onCounter ? `, ${onCounter} on the counter` : ""));
+      });
+    }
+
+    function addNote(item) {
+      const avail = available(item);
+      if (avail === 0) return "None left on the shelf.";
+      const qty = currentCat().stack ? state.qty : 1;
+      return `Adds ${qty} for ${fmt(unitPrice(item) * qty)} caps.`;
+    }
+
+    function renderDetail() {
+      const detail = $("tp-detail");
+      const item = current();
+      const avail = available(item);
+      const price = unitPrice(item);
+      const onCounter = inCart(item);
+      const stack = currentCat().stack;
+      state.qty = Math.max(1, Math.min(state.qty, Math.max(avail, 1)));
+
+      const diff = price - item.value;
+      const diffNote = diff === 0 ? "" :
+        `<span class="pip-dim tp-diff">${Math.round(Math.abs(diff) / item.value * 100)}% ${diff < 0 ? "under" : "over"} list</span>`;
+
+      const stepper = stack && avail > 0 ? `
+        <div class="tp-qty">
+          <span class="pip-field__label" id="tp-qty-label">Quantity</span>
+          <div class="pip-stepper" role="group" aria-labelledby="tp-qty-label" id="tp-qty" data-pip-stepper data-min="1" data-max="${avail}" data-value="${state.qty}">
+            <button type="button" class="pip-arrow" id="tp-qty-dec" aria-label="Fewer"></button>
+            <output aria-live="polite">${state.qty}</output>
+            <button type="button" class="pip-arrow pip-arrow--next" id="tp-qty-inc" aria-label="More"></button>
+          </div>
+          ${avail > 1 ? `<button type="button" class="pip-btn pip-btn--ghost pip-btn--small" id="tp-qty-all">Take all ${avail}</button>` : ""}
+        </div>` : "";
+
+      keepFocus(detail, () => {
+        detail.innerHTML = `
+          <h2 class="tp-detail__name">${item.name}</h2>
+          <p class="tp-detail__desc">${item.desc}</p>
+          <dl class="pip-readout">
+            ${item.stats.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}
+            <div><dt>Weight</dt><dd>${fmtWt(item.weight)} lb</dd></div>
+            <div><dt>Listed value</dt><dd>${fmt(item.value)} caps</dd></div>
+            <div class="tp-yours"><dt>Your price</dt><dd>${diffNote}${fmt(price)} caps</dd></div>
+            <div><dt>On the shelf</dt><dd>${avail}${onCounter ? ` <span class="pip-dim tp-diff">${onCounter} on the counter</span>` : ""}</dd></div>
+          </dl>
+          ${stepper}
+          <div class="tp-addrow">
+            <button type="button" class="pip-btn pip-btn--primary" id="tp-add" aria-describedby="tp-add-note"${avail ? "" : " disabled"}><kbd>E</kbd> Add to barter</button>
+            <p class="pip-field__help" id="tp-add-note">${addNote(item)}</p>
+          </div>`;
+        Pip.init(detail);
+      });
+    }
+
+    function renderCart() {
+      const list = $("tp-cart");
+      keepFocus(list, () => {
+        list.innerHTML = [...cart].map(([id, qty]) => {
+          const { item } = byId.get(id);
+          return `
+            <li class="tp-line">
+              <span class="tp-line__name">${item.name}</span>
+              <span class="tp-line__qty">×${qty}</span>
+              <span class="tp-line__total">${fmt(unitPrice(item) * qty)}<span class="pip-sr"> caps</span></span>
+              <button type="button" class="pip-btn pip-btn--ghost pip-btn--small" id="tp-rm-${id}" data-remove="${id}" aria-label="Remove ${item.name} from the counter">Remove</button>
+            </li>`;
+        }).join("");
+      });
+      list.hidden = cart.size === 0;
+      $("tp-empty").hidden = cart.size > 0;
+    }
+
+    function renderTotals() {
+      const { cost, weight, count } = cartTotals();
+      const after = player.caps - cost;
+      const carry = Math.round((player.weight + weight) * 10) / 10;
+      const over = carry > player.capacity;
+
+      $("tp-cost").textContent = fmt(cost);
+      $("tp-after").textContent = fmt(after);
+      $("tp-after").classList.toggle("pip-hazard", after < 0);
+      $("tp-wadd").textContent = `${fmtWt(weight)} lb`;
+
+      const meter = $("tp-carry");
+      Pip.setMeter(meter, Math.min(carry, player.capacity));
+      meter.setAttribute("aria-valuetext", `${fmtWt(carry)} of ${player.capacity} pounds`);
+      meter.classList.toggle("tp-over", over);
+      $("tp-carry-text").textContent = `${fmtWt(carry)}/${player.capacity} lb`;
+      $("tp-carry-text").classList.toggle("pip-hazard", over);
+
+      $("tp-heavy").hidden = !over;
+      $("tp-heavy-body").textContent =
+        `This trade puts you at ${fmtWt(carry)} of ${player.capacity} lb. You can still buy it, but you'll walk slowly and can't fast travel until you drop ${fmtWt(carry - player.capacity)} lb.`;
+
+      $("tp-short").hidden = after >= 0;
+      $("tp-short-body").textContent =
+        `You're ${fmt(-after)} caps short. Take something off the counter to make the trade.`;
+
+      const trade = $("tp-trade");
+      trade.disabled = count === 0 || after < 0;
+      $("tp-trade-note").textContent =
+        count === 0 ? "Add something to the counter first." :
+        after < 0 ? `You need ${fmt(-after)} more caps.` :
+        `Hold the button to pay ${fmt(cost)} caps for ${count} item${count === 1 ? "" : "s"}.`;
+    }
+
+    function renderStatus() {
+      $("tp-st-caps").textContent = fmt(player.caps);
+      $("tp-st-wg").textContent = `${fmtWt(player.weight)}/${player.capacity}`;
+      $("tp-st-cha").textContent = player.charisma;
+    }
+
+    function renderAll() {
+      updateLists();
+      renderDetail();
+      renderCart();
+      renderTotals();
+      renderStatus();
+    }
+
+    /* Actions -------------------------------------------------------------- */
+
+    function addSelected() {
+      const item = current();
+      const avail = available(item);
+      if (avail === 0) { announce(`No ${item.name} left on the shelf.`); return; }
+      const qty = currentCat().stack ? Math.min(state.qty, avail) : 1;
+      cart.set(item.id, inCart(item) + qty);
+      state.qty = 1;
+      renderAll();
+      announce(`Added ${qty} ${item.name} to the counter.`);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const stock = document.querySelector(".tp-stock");
+      const detail = $("tp-detail");
+
+      stock.addEventListener("pip:tab", (e) => {
+        state.cat = e.detail.tab.dataset.cat;
+        state.qty = 1;
+        renderDetail();
+      });
+      stock.addEventListener("pip:select", (e) => {
+        state.selected[state.cat] = e.detail.option.dataset.id;
+        state.qty = 1;
+        renderDetail();
+      });
+      stock.addEventListener("keydown", (e) => {
+        if (e.key.toLowerCase() !== "e" || e.ctrlKey || e.metaKey || e.altKey) return;
+        if (!e.target.closest("[role=option]")) return;
+        e.preventDefault();
+        addSelected();
+      });
+
+      detail.addEventListener("click", (e) => {
+        if (e.target.closest("#tp-add")) addSelected();
+        if (e.target.closest("#tp-qty-all")) {
+          state.qty = available(current());
+          renderDetail();
+          $("tp-qty-inc")?.focus();
+        }
+      });
+      detail.addEventListener("pip:change", (e) => {
+        if (e.target.id !== "tp-qty") return;
+        state.qty = e.detail.value;
+        $("tp-add-note").textContent = addNote(current());
+      });
+
+      $("tp-cart").addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-remove]");
+        if (!btn) return;
+        const id = btn.dataset.remove;
+        const index = [...cart.keys()].indexOf(id);
+        cart.delete(id);
+        renderAll();
+        announce(`Removed ${byId.get(id).item.name} from the counter.`);
+        const rest = $("tp-cart").querySelectorAll("[data-remove]");
+        (rest[Math.min(index, rest.length - 1)] || $("tp-empty")).focus();
+      });
+
+      $("tp-cha").addEventListener("pip:change", (e) => {
+        player.charisma = e.detail.value;
+        renderAll();
+      });
+
+      $("tp-trade").addEventListener("pip:confirm", () => {
+        const { cost, weight, count } = cartTotals();
+        if (count === 0 || cost > player.caps) return;
+        cart.forEach((qty, id) => { byId.get(id).item.qty -= qty; });
+        player.caps -= cost;
+        player.weight = Math.round((player.weight + weight) * 10) / 10;
+        cart.clear();
+        state.qty = 1;
+        renderAll();
+        Pip.toast({ title: "Trade complete", body: `${count} item${count === 1 ? "" : "s"} for ${fmt(cost)} caps`, icon: "$" });
+        selectedOption()?.focus();
+      });
+
+      renderAll();
+    });
+  </script>
+</body>
+</html>

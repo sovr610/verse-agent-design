@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hollow Creek Overseer</title>
+<link rel="stylesheet" href="../css/pipboy.css">
+<script src="../js/pipboy.js" defer></script>
+<style>
+/* Hollow Creek Overseer: page layout only. Every color comes from the pipboy.css tokens. */
+
+/* Top bar */
+.oc-top { border-bottom: var(--line) solid var(--phos-low); }
+.oc-top__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-4);
+  padding-block: var(--s-3);
+}
+.oc-top__right { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-4); }
+.oc-top__right a { font-size: var(--t-14); }
+@media (max-width: 30rem) {
+  .oc-top .pip-segmented > button { padding: .45em .6em; }
+}
+
+/* Page frame */
+.oc-main { display: grid; gap: var(--s-6); padding-block: var(--s-5) var(--s-7); }
+.oc-title { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--s-4); }
+.oc-title h1 { font-size: clamp(var(--t-36), 5vw, var(--t-48)); }
+.oc-sub { color: var(--phos-dim); font-variant-numeric: tabular-nums; }
+.oc-bell { display: grid; justify-items: end; gap: var(--s-1); }
+@media (max-width: 30rem) { .oc-bell { justify-items: start; } }
+
+/* Status bar cells */
+.oc-stat { flex: 1 1 8.5rem; justify-content: space-between; }
+.oc-stat__label { color: var(--phos-dim); }
+.oc-stat__value { display: inline-flex; align-items: center; gap: .5em; font-size: var(--t-21); }
+
+/* Raid alert action sits under the text column */
+.oc-alert-action { grid-column: 2; justify-self: start; margin-top: var(--s-2); }
+
+/* Panel grid */
+.oc-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--s-6) var(--s-5);
+  align-items: start;
+}
+.oc-span-7 { grid-column: span 7; }
+.oc-span-5 { grid-column: span 5; }
+.oc-span-12 { grid-column: 1 / -1; }
+@media (max-width: 60rem) { .oc-grid > * { grid-column: 1 / -1; } }
+
+/* Happiness chart */
+.oc-chart { position: relative; min-width: 0; }
+.oc-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.oc-chart svg:focus-visible { outline: 2px solid var(--phos); outline-offset: 4px; }
+.oc-chart text { font-family: var(--font-ui); font-size: 12px; fill: var(--phos-dim); font-variant-numeric: tabular-nums; }
+.oc-chart .oc-grid-line { stroke: var(--phos-low); stroke-width: 1; opacity: .55; }
+.oc-chart .oc-axis { stroke: var(--phos-dim); stroke-width: 1; }
+.oc-chart .oc-target { stroke: var(--phos-dim); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.oc-chart .oc-area { fill: var(--phos); fill-opacity: .1; }
+.oc-chart .oc-line { fill: none; stroke: var(--phos); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.oc-chart .oc-dot { fill: var(--phos); stroke: var(--void); stroke-width: 2; }
+.oc-chart .oc-end { font-size: 14px; font-weight: 700; fill: var(--phos-hi); }
+.oc-chart .oc-cross { stroke: var(--phos-dim); stroke-width: 1; }
+.oc-tip {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  gap: 2px;
+  padding: .35em .6em;
+  border: 1px solid var(--phos-dim);
+  background: var(--tube);
+  white-space: nowrap;
+  pointer-events: none;
+  translate: -50% calc(-100% - .7rem);
+}
+.oc-tip strong { font: 700 var(--t-18)/1 var(--font-ui); }
+.oc-tip span { font: 400 var(--t-12)/1.2 var(--font-ui); color: var(--phos-dim); }
+.oc-numbers { margin-top: var(--s-3); }
+.oc-numbers > summary { font-size: var(--t-14); }
+
+/* Production and need */
+.oc-meters { display: grid; gap: var(--s-3); }
+.oc-meters .pip-meter__label { width: 3.6rem; }
+.oc-meters .pip-meter__value { min-width: 7.5rem; text-align: right; }
+.oc-meter-note { margin-top: var(--s-4); color: var(--phos-dim); font-size: var(--t-16); }
+
+/* Settler roster */
+.oc-roster td { vertical-align: middle; }
+.oc-roster .pip-select { min-width: 9.5rem; }
+.oc-roster .pip-select select { padding-block: .35em; font-size: var(--t-14); }
+
+/* Map and lookout */
+.oc-lookout { display: grid; gap: var(--s-3); }
+.oc-heading {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 4.5rem;
+  align-items: center;
+  gap: var(--s-3);
+}
+.oc-heading .pip-range { --gap-c: var(--void); }
+.oc-heading output { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+@media (max-width: 30rem) {
+  .oc-heading { grid-template-columns: minmax(0, 1fr) 4.5rem; }
+  .oc-heading label { grid-column: 1 / -1; }
+}
+.pip-map__label.oc-flip { transform: translate(calc(-100% - 1rem), -50%); }
+.oc-note { min-height: 3em; color: var(--phos-dim); font-size: var(--t-16); }
+
+/* Radio log */
+.oc-radio { --tube-radius: .75rem; }
+.oc-radio .pip-terminal { padding: var(--s-4); font-size: var(--t-21); }
+.oc-log { max-height: 16rem; margin-bottom: var(--s-3); overflow-y: auto; scrollbar-width: thin; }
+.oc-post input::placeholder { color: var(--phos-low); opacity: 1; }
+
+/* Footer */
+.oc-foot { border-top: var(--line) solid var(--phos-low); }
+.oc-foot p { padding-block: var(--s-4); color: var(--phos-dim); font-size: var(--t-14); }
+</style>
+</head>
+<body class="pip pip-page">
+
+<header class="oc-top">
+  <div class="pip-container oc-top__inner">
+    <p class="pip-h3">Hollow Creek Overseer</p>
+    <div class="oc-top__right">
+      <div class="pip-segmented" role="radiogroup" aria-label="Screen tube" data-pip-phosphor-switch>
+        <button type="button" role="radio" value="p1" data-phosphor="p1">P1</button>
+        <button type="button" role="radio" value="p3" data-phosphor="p3">P3</button>
+        <button type="button" role="radio" value="p4" data-phosphor="p4">P4</button>
+        <button type="button" role="radio" value="p7" data-phosphor="p7">P7</button>
+      </div>
+      <a href="../index.html">Back to the kit</a>
+    </div>
+  </div>
+</header>
+
+<main class="pip-container oc-main">
+
+  <div class="oc-title">
+    <div>
+      <h1>Hollow Creek</h1>
+      <p class="oc-sub">Day 41, <time id="oc-clock">14:32</time> local</p>
+    </div>
+    <div class="oc-bell">
+      <button type="button" class="pip-btn pip-btn--primary pip-btn--hold" id="oc-bell" data-pip-hold="1200" aria-describedby="oc-bell-help">Ring the bell</button>
+      <span class="pip-field__help" id="oc-bell-help">Press and hold to call everyone to the workshop</span>
+    </div>
+  </div>
+
+  <section class="pip-bar" aria-label="Workshop status">
+    <div class="pip-bar__cell oc-stat"><span class="oc-stat__label">People</span><span class="oc-stat__value"><b data-stat="people">14</b></span></div>
+    <div class="pip-bar__cell oc-stat"><span class="oc-stat__label">Food</span><span class="oc-stat__value"><b data-stat="food">12</b><span class="pip-tag pip-tag--hazard" data-short="food">Short 2</span></span></div>
+    <div class="pip-bar__cell oc-stat"><span class="oc-stat__label">Water</span><span class="oc-stat__value"><b data-stat="water">22</b><span class="pip-tag pip-tag--hazard" data-short="water" hidden></span></span></div>
+    <div class="pip-bar__cell oc-stat"><span class="oc-stat__label">Power</span><span class="oc-stat__value"><b data-stat="power">40</b></span></div>
+    <div class="pip-bar__cell oc-stat"><span class="oc-stat__label">Defense</span><span class="oc-stat__value"><b data-stat="defense">85</b></span></div>
+    <div class="pip-bar__cell oc-stat"><span class="oc-stat__label">Beds</span><span class="oc-stat__value"><b data-stat="beds">16</b><span class="pip-tag pip-tag--hazard" data-short="beds" hidden></span></span></div>
+    <div class="pip-bar__cell oc-stat"><span class="oc-stat__label">Happiness</span><span class="oc-stat__value"><b data-stat="happiness">72%</b></span></div>
+  </section>
+
+  <div class="pip-alert pip-alert--critical" id="oc-raid" role="alert" tabindex="-1">
+    <span class="pip-alert__icon" aria-hidden="true">!</span>
+    <p class="pip-alert__title">Raiders sighted near the north gate</p>
+    <p class="pip-alert__body">The lookout counts five or six on the ridge road. Two more guards would raise defense from <span id="oc-raid-def">85</span> to <span id="oc-raid-def-next">105</span>.</p>
+    <button type="button" class="pip-btn pip-btn--danger pip-btn--small oc-alert-action" id="oc-send-guards">Send two guards</button>
+  </div>
+
+  <div class="oc-grid">
+
+    <section class="pip-panel oc-span-7" aria-labelledby="oc-h-happy">
+      <h2 class="pip-panel__title" id="oc-h-happy">Happiness, last 14 days</h2>
+      <p class="pip-sr" id="oc-chart-summary"></p>
+      <div class="oc-chart" id="oc-chart">
+        <svg id="oc-chart-svg" role="img" tabindex="0" aria-labelledby="oc-chart-summary"></svg>
+        <div class="oc-tip" id="oc-tip" aria-hidden="true" hidden><strong></strong><span></span></div>
+      </div>
+      <details class="pip-disclosure oc-numbers">
+        <summary>Show the numbers</summary>
+        <div class="pip-disclosure__body">
+          <div class="pip-table-wrap">
+            <table class="pip-table">
+              <caption class="pip-sr">Settlement happiness by day</caption>
+              <thead><tr><th scope="col">Day</th><th scope="col" class="num">Happiness</th></tr></thead>
+              <tbody id="oc-chart-rows"></tbody>
+            </table>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <section class="pip-panel oc-span-5" aria-labelledby="oc-h-prod">
+      <h2 class="pip-panel__title" id="oc-h-prod">Production and need</h2>
+      <div class="oc-meters">
+        <div class="pip-meter" role="meter" aria-label="Food produced against need" aria-valuemin="0" aria-valuemax="14" aria-valuenow="12" data-prod="food">
+          <span class="pip-meter__label">Food</span>
+          <span class="pip-meter__track"><span class="pip-meter__fill"></span></span>
+          <span class="pip-meter__value">12 / 14 needed</span>
+        </div>
+        <div class="pip-meter" role="meter" aria-label="Water produced against need" aria-valuemin="0" aria-valuemax="22" aria-valuenow="22" data-prod="water">
+          <span class="pip-meter__label">Water</span>
+          <span class="pip-meter__track"><span class="pip-meter__fill"></span></span>
+          <span class="pip-meter__value">22 / 14 needed</span>
+        </div>
+        <div class="pip-meter" role="meter" aria-label="Power produced against need" aria-valuemin="0" aria-valuemax="40" aria-valuenow="40" data-prod="power">
+          <span class="pip-meter__label">Power</span>
+          <span class="pip-meter__track"><span class="pip-meter__fill"></span></span>
+          <span class="pip-meter__value">40 / 32 needed</span>
+        </div>
+        <div class="pip-meter" role="meter" aria-label="Beds available against need" aria-valuemin="0" aria-valuemax="16" aria-valuenow="16" data-prod="beds">
+          <span class="pip-meter__label">Beds</span>
+          <span class="pip-meter__track"><span class="pip-meter__fill"></span></span>
+          <span class="pip-meter__value">16 / 14 needed</span>
+        </div>
+      </div>
+      <p class="oc-meter-note">Each settler needs 1 food, 1 water and 1 bed a day. Lights, the purifier and the turrets draw 32 power.</p>
+    </section>
+
+    <section class="pip-panel oc-span-12" aria-labelledby="oc-h-roster">
+      <h2 class="pip-panel__title" id="oc-h-roster">Settlers</h2>
+      <div class="pip-table-wrap">
+        <table class="pip-table oc-roster">
+          <caption class="pip-sr">Settler assignments. Change a job to rebalance food, water and defense.</caption>
+          <thead>
+            <tr><th scope="col">Settler</th><th scope="col">Job</th><th scope="col" class="num">Happiness</th><th scope="col">Status</th></tr>
+          </thead>
+          <tbody id="oc-roster"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="pip-panel oc-span-7" aria-labelledby="oc-h-map">
+      <h2 class="pip-panel__title" id="oc-h-map">Map and lookout</h2>
+      <div class="oc-lookout">
+        <div class="pip-compass" id="oc-compass" data-pip-compass data-heading="10"
+             data-markers='[{"bearing":10,"kind":"hostile"},{"bearing":160,"kind":"place"},{"bearing":250,"kind":"quest"}]'></div>
+        <div class="oc-heading">
+          <label class="pip-field__label" for="oc-heading">Lookout heading</label>
+          <input class="pip-range" id="oc-heading" type="range" min="0" max="359" value="10">
+          <output id="oc-heading-out" for="oc-heading">10° N</output>
+        </div>
+        <div class="pip-map" id="oc-map" data-pip-map data-seed="59">
+          <button type="button" class="pip-map__marker" data-kind="quest" style="--x:52%;--y:12%" aria-label="North gate"
+                  data-note="North gate: raiders seen on the ridge road at dawn. Keep it closed after dark."></button>
+          <span class="pip-map__label" style="--x:52%;--y:12%">North gate</span>
+          <button type="button" class="pip-map__marker" style="--x:72%;--y:28%" aria-label="Guard tower"
+                  data-note="Guard tower: covers the north and east approaches. Ammo crate restocked on day 40."></button>
+          <span class="pip-map__label oc-flip" style="--x:72%;--y:28%">Guard tower</span>
+          <button type="button" class="pip-map__marker" style="--x:36%;--y:40%" aria-label="Trader stall"
+                  data-note="Trader stall: Doc Halloway has 12 stimpaks and 3 RadAway for sale."></button>
+          <span class="pip-map__label" style="--x:36%;--y:40%">Trader stall</span>
+          <button type="button" class="pip-map__marker" style="--x:24%;--y:66%" aria-label="Farm plots"
+                  data-note="Farm plots: each farmer tends enough corn and gourds for 3 food a day."></button>
+          <span class="pip-map__label" style="--x:24%;--y:66%">Farm plots</span>
+          <button type="button" class="pip-map__marker" style="--x:60%;--y:74%" aria-label="Water pump"
+                  data-note="Water pump: pressure back to normal after the day 40 repair."></button>
+          <span class="pip-map__label" style="--x:60%;--y:74%">Water pump</span>
+          <span class="pip-map__player" style="--x:47%;--y:50%;--r:20deg" role="img" aria-label="You are at the workshop"></span>
+        </div>
+        <p class="oc-note" id="oc-map-note" aria-live="polite">Select a marker to read the lookout's note.</p>
+      </div>
+    </section>
+
+    <section class="pip-panel oc-span-5" aria-labelledby="oc-h-radio">
+      <h2 class="pip-panel__title" id="oc-h-radio">Radio log</h2>
+      <div class="pip-crt oc-radio">
+        <div class="pip-terminal" data-pip-type data-pip-cps="160">
+          <div class="oc-log" id="oc-log">
+<p class="pip-terminal__line">[06:40] WEATHER: Dust front moving in from the west by noon. Cover the crops.</p>
+<p class="pip-terminal__line">[07:15] ASHFORD MILL: Caravan left our gate with 40 purified water.</p>
+<p class="pip-terminal__line">[08:02] KETTLE ROCK: Two bags of fertilizer wanted. We pay in scrap steel.</p>
+<p class="pip-terminal__line">[09:30] PATROL: Ridge road clear as far as the old billboard.</p>
+<p class="pip-terminal__line">[11:48] TRADER: Stall restocked. 12 stimpaks on the shelf.</p>
+<p class="pip-terminal__line">[13:05] LOOKOUT: Smoke and movement north of the gate. Five or six raiders.</p>
+<p class="pip-terminal__line">[13:20] OVERSEER: Gate closed. Guards to the north wall.</p>
+<p class="pip-terminal__line">[14:10] PURIFIER: Pump two pressure normal after repair.</p>
+          </div>
+          <form class="oc-post" id="oc-post" autocomplete="off">
+            <label class="pip-terminal__prompt">
+              <span class="pip-sr">Message for the radio log</span>
+              <input id="oc-post-input" name="message" maxlength="80" placeholder="Type a message, press Enter">
+            </label>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section class="pip-panel oc-span-12" aria-labelledby="oc-h-supply">
+      <h2 class="pip-panel__title" id="oc-h-supply">Supply lines</h2>
+      <div class="pip-split">
+        <ul class="pip-list" id="oc-supply-list" role="listbox" aria-label="Linked settlements" data-pip-list>
+          <li role="option" aria-selected="true" data-id="ashford">Ashford Mill <span class="pip-list__meta">6 mi</span></li>
+          <li role="option" data-id="redgully">Red Gully Farm <span class="pip-list__meta">9 mi</span></li>
+          <li role="option" data-id="kettle">Kettle Rock <span class="pip-list__meta">14 mi</span></li>
+          <li role="option" data-id="vault">Vault 59 trade door <span class="pip-list__meta">22 mi</span></li>
+        </ul>
+        <dl class="pip-dl" id="oc-supply-detail" aria-live="polite"></dl>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<footer class="oc-foot">
+  <div class="pip-container">
+    <p>Hollow Creek Overseer is an example page built with the <a href="../index.html">Pip-OS Interface Kit</a>.</p>
+  </div>
+</footer>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const h = (tag, props = {}, ...kids) => {
+    const el = Object.assign(document.createElement(tag), props);
+    el.append(...kids);
+    return el;
+  };
+  const pad = (n) => String(n).padStart(2, "0");
+  const hhmm = (d = new Date()) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const DIRS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+
+  /* Clock: updates on each minute boundary */
+  const clock = $("#oc-clock");
+  const tickClock = () => { clock.textContent = hhmm(); };
+  tickClock();
+  setTimeout(() => { tickClock(); setInterval(tickClock, 60000); }, (60 - new Date().getSeconds()) * 1000);
+
+  /* Settlement model */
+  const JOBS = ["Farming", "Water", "Guard", "Scavenging", "Store", "Unassigned"];
+  const BASE = { food: 3, water: 7, defense: 45, power: 40, beds: 16 };
+  const POWER_NEED = 32;
+  const IDLE_PENALTY = 12;
+  const settlers = [
+    { name: "Marta Kessler", job: "Farming", mood: 78 },
+    { name: "Abe Tollund", job: "Farming", mood: 70 },
+    { name: "June Okafor", job: "Farming", mood: 74 },
+    { name: "Rosa Delgado", job: "Water", mood: 80 },
+    { name: "Theo Marsh", job: "Water", mood: 66 },
+    { name: "Wen Liu", job: "Water", mood: 72 },
+    { name: "Dale Brenner", job: "Guard", mood: 68 },
+    { name: "Ida Quill", job: "Guard", mood: 75 },
+    { name: "Hector Vance", job: "Guard", mood: 64 },
+    { name: "Pike", job: "Guard", mood: 70 },
+    { name: "Nora Fitch", job: "Scavenging", mood: 76 },
+    { name: "Calloway", job: "Scavenging", mood: 69 },
+    { name: "Bess Arnot", job: "Store", mood: 82 },
+    { name: "Eli Sutter", job: "Unassigned", mood: 76 },
+  ];
+  const happinessOf = (s) => s.mood - (s.job === "Unassigned" ? IDLE_PENALTY : 0);
+  const count = (job) => settlers.filter((s) => s.job === job).length;
+  const totals = () => ({
+    people: settlers.length,
+    food: BASE.food + 3 * count("Farming"),
+    water: BASE.water + 5 * count("Water"),
+    power: BASE.power,
+    defense: BASE.defense + 10 * count("Guard"),
+    beds: BASE.beds,
+    happiness: Math.round(settlers.reduce((sum, s) => sum + happinessOf(s), 0) / settlers.length),
+  });
+
+  /* Settler roster */
+  const roster = $("#oc-roster");
+  settlers.forEach((s, i) => {
+    const select = h("select", { id: `oc-job-${i}` });
+    select.setAttribute("aria-label", `Job for ${s.name}`);
+    JOBS.forEach((job) => select.append(h("option", { value: job, textContent: job })));
+    select.addEventListener("change", () => { s.job = select.value; update(); });
+    s.select = select;
+    s.happyCell = h("td", { className: "num" });
+    s.tag = h("span");
+    roster.append(h("tr", {},
+      h("td", { textContent: s.name }),
+      h("td", {}, h("span", { className: "pip-select" }, select)),
+      s.happyCell,
+      h("td", {}, s.tag)));
+  });
+
+  const STATUS = {
+    Unassigned: ["Idle", "pip-tag"],
+    Guard: ["On watch", "pip-tag pip-tag--outline"],
+  };
+  function syncRow(s) {
+    s.select.value = s.job;
+    s.happyCell.textContent = `${happinessOf(s)}%`;
+    const [label, cls] = STATUS[s.job] || ["Working", "pip-tag pip-tag--outline"];
+    s.tag.className = cls;
+    s.tag.textContent = label;
+  }
+
+  /* Status bar */
+  function updateStats(t) {
+    ["people", "food", "water", "power", "defense", "beds"].forEach((key) => {
+      $(`[data-stat="${key}"]`).textContent = t[key];
+    });
+    $('[data-stat="happiness"]').textContent = `${t.happiness}%`;
+    ["food", "water", "beds"].forEach((key) => {
+      const tag = $(`[data-short="${key}"]`);
+      const short = t.people - t[key];
+      tag.hidden = short <= 0;
+      tag.textContent = `Short ${short}`;
+    });
+  }
+
+  /* Production meters */
+  function setProduction(key, produced, need) {
+    const meter = $(`[data-prod="${key}"]`);
+    meter.setAttribute("aria-valuemax", Math.max(produced, need));
+    meter.setAttribute("aria-valuetext", `${produced} produced, ${need} needed`);
+    Pip.setMeter(meter, produced);
+    meter.classList.toggle("pip-meter--low", produced < need);
+    $(".pip-meter__value", meter).textContent = `${produced} / ${need} needed`;
+  }
+
+  /* Raid alert */
+  const raid = $("#oc-raid");
+  const sendGuards = $("#oc-send-guards");
+  function syncRaid(t) {
+    if (!raid.classList.contains("pip-alert--critical")) return;
+    $("#oc-raid-def").textContent = t.defense;
+    $("#oc-raid-def-next").textContent = t.defense + 20;
+  }
+  sendGuards.addEventListener("click", () => {
+    // Pull idle and scavenging settlers first so food and water keep flowing.
+    const order = ["Unassigned", "Scavenging", "Store", "Farming", "Water"];
+    const picks = settlers
+      .filter((s) => s.job !== "Guard")
+      .sort((a, b) => order.indexOf(a.job) - order.indexOf(b.job))
+      .slice(0, 2);
+    if (!picks.length) return;
+    picks.forEach((s) => { s.job = "Guard"; });
+    update();
+    const names = picks.map((s) => s.name).join(" and ");
+    const t = totals();
+    raid.classList.remove("pip-alert--critical");
+    raid.removeAttribute("role");
+    $(".pip-alert__title", raid).textContent = "North gate covered";
+    $(".pip-alert__body", raid).textContent =
+      `${names} ${picks.length > 1 ? "are" : "is"} now on guard. Defense is ${t.defense}.`;
+    sendGuards.remove();
+    raid.focus();
+    Pip.toast({ title: "Guards posted", body: `${names} moved to the north gate`, icon: "!" });
+  });
+
+  /* Happiness chart: one series, one scale (0–100%) */
+  const HISTORY = [61, 63, 60, 64, 66, 65, 68, 67, 70, 69, 71, 74, 73];
+  const FIRST_DAY = 28;
+  const TARGET = 80;
+  const chartWrap = $("#oc-chart");
+  const svg = $("#oc-chart-svg");
+  const tip = $("#oc-tip");
+  let data = [];
+  let geom = null;
+  let hoverIndex = -1;
+
+  function renderChart(today) {
+    data = [...HISTORY, today];
+    const W = Math.max(260, Math.round(chartWrap.clientWidth));
+    const H = W < 480 ? 210 : 240;
+    const m = { t: 18, r: 46, b: 30, l: 42 };
+    const n = data.length;
+    const last = n - 1;
+    const x = (i) => m.l + (i / last) * (W - m.l - m.r);
+    const y = (v) => m.t + (1 - v / 100) * (H - m.t - m.b);
+    geom = { x, y, W, H, m };
+
+    const pts = data.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`);
+    const grid = [0, 25, 50, 75, 100].map((v) =>
+      `<line class="${v === 0 ? "oc-axis" : "oc-grid-line"}" x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}"/>` +
+      `<text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end">${v}%</text>`).join("");
+    const xTicks = [0, 4, 8, last].map((i) =>
+      `<text x="${x(i)}" y="${H - 8}" text-anchor="middle">Day ${FIRST_DAY + i}</text>`).join("");
+
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.setAttribute("width", W);
+    svg.setAttribute("height", H);
+    svg.innerHTML = `${grid}${xTicks}
+      <line class="oc-target" x1="${m.l}" x2="${W - m.r}" y1="${y(TARGET)}" y2="${y(TARGET)}"/>
+      <text x="${W - m.r}" y="${y(TARGET) - 6}" text-anchor="end">Target ${TARGET}%</text>
+      <path class="oc-area" d="M${x(0)},${y(0)} L${pts.join(" L")} L${x(last)},${y(0)} Z"/>
+      <path class="oc-line" d="M${pts.join(" L")}"/>
+      <circle class="oc-dot" cx="${x(last)}" cy="${y(data[last])}" r="4.5"/>
+      <text class="oc-end" x="${x(last) + 9}" y="${y(data[last]) + 5}">${data[last]}%</text>
+      <g class="oc-hover" visibility="hidden">
+        <line class="oc-cross" y1="${m.t}" y2="${H - m.b}"/>
+        <circle class="oc-dot" r="4.5"/>
+      </g>
+      <rect x="${m.l}" y="${m.t}" width="${W - m.l - m.r}" height="${H - m.t - m.b}" fill="transparent"/>`;
+
+    const low = Math.min(...data);
+    $("#oc-chart-summary").textContent =
+      `Happiness over the last 14 days: ${data[0]}% on day ${FIRST_DAY}, lowest ${low}% on day ${FIRST_DAY + data.indexOf(low)}, ` +
+      `${data[last]}% today on day ${FIRST_DAY + last}. The target is ${TARGET}%. Use the arrow keys to read each day.`;
+    $("#oc-chart-rows").replaceChildren(...data.map((v, i) =>
+      h("tr", {}, h("td", { textContent: `Day ${FIRST_DAY + i}${i === last ? " (today)" : ""}` }), h("td", { className: "num", textContent: `${v}%` }))));
+    if (hoverIndex >= 0) showPoint(Math.min(hoverIndex, last));
+  }
+
+  function showPoint(i) {
+    if (!geom) return;
+    hoverIndex = i;
+    const { x, y, W } = geom;
+    const cx = x(i);
+    const cy = y(data[i]);
+    const g = $(".oc-hover", svg);
+    g.setAttribute("visibility", "visible");
+    const cross = $("line", g);
+    cross.setAttribute("x1", cx);
+    cross.setAttribute("x2", cx);
+    const dot = $("circle", g);
+    dot.setAttribute("cx", cx);
+    dot.setAttribute("cy", cy);
+    tip.hidden = false;
+    $("strong", tip).textContent = `${data[i]}%`;
+    $("span", tip).textContent = `Day ${FIRST_DAY + i}${i === data.length - 1 ? ", today" : ""}`;
+    tip.style.left = `${Math.min(Math.max(cx, 48), W - 48)}px`;
+    tip.style.top = `${cy}px`;
+  }
+  function hidePoint() {
+    hoverIndex = -1;
+    $(".oc-hover", svg)?.setAttribute("visibility", "hidden");
+    tip.hidden = true;
+  }
+  svg.addEventListener("pointermove", (e) => {
+    if (!geom) return;
+    const rect = svg.getBoundingClientRect();
+    const px = (e.clientX - rect.left) * (geom.W / rect.width);
+    const i = Math.round(((px - geom.m.l) / (geom.W - geom.m.l - geom.m.r)) * (data.length - 1));
+    showPoint(Math.max(0, Math.min(data.length - 1, i)));
+  });
+  svg.addEventListener("pointerleave", hidePoint);
+  svg.addEventListener("focus", () => showPoint(data.length - 1));
+  svg.addEventListener("blur", hidePoint);
+  svg.addEventListener("keydown", (e) => {
+    const step = { ArrowLeft: -1, ArrowRight: 1 }[e.key];
+    if (!step) return;
+    e.preventDefault();
+    const from = hoverIndex < 0 ? data.length - 1 : hoverIndex;
+    showPoint(Math.max(0, Math.min(data.length - 1, from + step)));
+  });
+
+  /* Recompute everything from the roster */
+  function update() {
+    const t = totals();
+    settlers.forEach(syncRow);
+    updateStats(t);
+    setProduction("food", t.food, t.people);
+    setProduction("water", t.water, t.people);
+    setProduction("power", t.power, POWER_NEED);
+    setProduction("beds", t.beds, t.people);
+    syncRaid(t);
+    renderChart(t.happiness);
+  }
+  update();
+  new ResizeObserver(() => renderChart(totals().happiness)).observe(chartWrap);
+
+  /* Ring the bell */
+  $("#oc-bell").addEventListener("pip:confirm", () =>
+    Pip.toast({ title: "Bell rung", body: "All settlers called to the workshop", icon: "!" }));
+
+  /* Lookout heading drives the compass */
+  const compass = $("#oc-compass");
+  const heading = $("#oc-heading");
+  const headingOut = $("#oc-heading-out");
+  const setHeading = () => {
+    const v = Number(heading.value);
+    Pip.compass(compass).set(v);
+    headingOut.textContent = `${v}° ${DIRS[Math.round(v / 45) % 8]}`;
+  };
+  heading.addEventListener("input", setHeading);
+  setHeading();
+
+  /* Map notes */
+  const note = $("#oc-map-note");
+  $("#oc-map").addEventListener("pip:marker", (e) => { note.textContent = e.detail.marker.dataset.note; });
+
+  /* Radio log posting */
+  const log = $("#oc-log");
+  log.scrollTop = log.scrollHeight;
+  $("#oc-post").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const input = $("#oc-post-input");
+    const text = input.value.trim();
+    if (!text) return;
+    log.append(h("p", { className: "pip-terminal__line", textContent: `[${hhmm()}] OVERSEER: ${text}` }));
+    input.value = "";
+    log.scrollTop = log.scrollHeight;
+  });
+
+  /* Supply lines */
+  const SUPPLY = {
+    ashford: { leader: "Ruth Calder", miles: "6 miles", goods: "Purified water out, corn in", last: "Today, 07:15" },
+    redgully: { leader: "Amos Pell", miles: "9 miles", goods: "Fertilizer and tato seed", last: "Day 40" },
+    kettle: { leader: "Sister Joan", miles: "14 miles", goods: "Scrap steel and medicine", last: "Day 38" },
+    vault: { leader: "Kit, the overseer's runner", miles: "22 miles", goods: "Purifier parts and ammunition", last: "Day 33" },
+  };
+  const supplyList = $("#oc-supply-list");
+  const supplyDetail = $("#oc-supply-detail");
+  const showSupply = (option) => {
+    const d = SUPPLY[option.dataset.id];
+    if (!d) return;
+    supplyDetail.replaceChildren(
+      h("dt", { textContent: "Caravan leader" }), h("dd", { textContent: d.leader }),
+      h("dt", { textContent: "Route length" }), h("dd", { textContent: d.miles }),
+      h("dt", { textContent: "Goods shared" }), h("dd", { textContent: d.goods }),
+      h("dt", { textContent: "Last arrival" }), h("dd", { textContent: d.last }),
+    );
+  };
+  supplyList.addEventListener("pip:select", (e) => showSupply(e.detail.option));
+  showSupply($('[aria-selected="true"]', supplyList));
+});
+</script>
+</body>
+</html>

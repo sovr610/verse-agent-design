@@ -1,0 +1,1353 @@
+@import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&family=VT323&display=swap");
+
+/* ==========================================================================
+   PIP-OS INTERFACE KIT v1.0 — pipboy.css
+
+   Every color on screen comes from two tokens: --phos (lit phosphor) and
+   --tube (unlit glass). Swap the tube with data-phosphor="p1|p3|p4|p7" on
+   <html>, or on any element to give that subtree its own tube.
+
+   Contents
+     1  Tokens and tubes          9  Lists and readouts
+     2  Base                     10  Meters and status bar
+     3  Layout                   11  Tables, tags, tooltips
+     4  Screen effects           12  Panels and disclosures
+     5  Buttons                  13  Alerts, toasts, dialogs, loaders
+     6  Text fields              14  HUD: compass, map, scope, condition
+     7  Choices                  15  Terminal and hacking
+     8  Tabs and paging          16  Utilities and motion preferences
+   ========================================================================== */
+
+
+/* 1. Tokens and tubes ------------------------------------------------------ */
+
+:root {
+  color-scheme: dark;
+
+  /* The tube. P1 green is the Pip-Boy default. */
+  --phos: #1bff80;
+  --tube: #03130a;
+  --hazard: #ff5436;              /* damage, stolen goods, critical alerts */
+
+  --font-ui: "Roboto Condensed", "Arial Narrow", "Liberation Sans Narrow", sans-serif;
+  --font-term: "VT323", "Lucida Console", "Courier New", monospace;
+
+  /* Classical scale: 12 14 16 18 21 24 36 48 60 72 */
+  --t-12: .75rem;    --t-14: .875rem;  --t-16: 1rem;     --t-18: 1.125rem;
+  --t-21: 1.3125rem; --t-24: 1.5rem;   --t-36: 2.25rem;  --t-48: 3rem;
+  --t-60: 3.75rem;   --t-72: 4.5rem;
+
+  --s-1: .25rem; --s-2: .5rem; --s-3: .75rem; --s-4: 1rem;
+  --s-5: 1.5rem; --s-6: 2rem;  --s-7: 3rem;   --s-8: 4rem;
+
+  --line: 2px;                    /* stroke weight of every rule and frame */
+  --gap: 3px;                     /* seam between filled readout cells */
+  --tube-radius: 1.5rem;
+  --ease-crt: cubic-bezier(.2, .8, .2, 1);
+}
+
+/* Derived shades live on every tube scope so a nested tube recomputes them. */
+:root, [data-phosphor] {
+  --phos-hi:     color-mix(in oklab, var(--phos) 62%, #fff);
+  --phos-dim:    color-mix(in oklab, var(--phos) 68%, var(--tube));
+  --phos-low:    color-mix(in oklab, var(--phos) 38%, var(--tube));
+  --phos-fill:   color-mix(in oklab, var(--phos) 17%, var(--tube));
+  --phos-wash:   color-mix(in oklab, var(--phos) 8%, var(--tube));
+  --void:        color-mix(in oklab, var(--tube) 50%, #000);
+  --bezel:       color-mix(in oklab, var(--tube) 25%, #181814);
+  --glow-c:      color-mix(in srgb, var(--phos) 50%, transparent);
+  --glow:        0 0 .3em var(--glow-c);
+  --glow-hazard: color-mix(in srgb, var(--hazard) 55%, transparent);
+}
+
+[data-phosphor="p1"] { --phos: #1bff80; --tube: #03130a; }   /* green, 525 nm */
+[data-phosphor="p3"] { --phos: #ffb53d; --tube: #130b02; }   /* amber, 602 nm */
+[data-phosphor="p4"] { --phos: #def0ff; --tube: #05080c; }   /* white */
+[data-phosphor="p7"] { --phos: #46c8ff; --tube: #020b13; }   /* blue, 440 nm */
+
+/* A nested tube repaints its own text and glow. */
+[data-phosphor] { color: var(--phos); text-shadow: var(--glow); }
+
+
+/* 2. Base ------------------------------------------------------------------ */
+
+[hidden] { display: none !important; }
+
+:root { scrollbar-color: var(--phos-dim) var(--void); }
+
+.pip {
+  margin: 0;
+  background: var(--void);
+  color: var(--phos);
+  font: 400 var(--t-18)/1.5 var(--font-ui);
+  text-shadow: var(--glow);
+  -webkit-font-smoothing: antialiased;
+  font-synthesis: none;
+}
+
+:where(.pip) *, :where(.pip) *::before, :where(.pip) *::after { box-sizing: border-box; }
+
+:where(.pip) h1, .pip-h1 {
+  margin: 0;
+  font: 400 clamp(var(--t-48), 7vw, var(--t-72))/.92 var(--font-term);
+  letter-spacing: .01em;
+  text-transform: uppercase;
+  text-wrap: balance;
+  color: var(--phos-hi);
+}
+:where(.pip) h2, .pip-h2 {
+  margin: 0;
+  font: 700 var(--t-24)/1.15 var(--font-ui);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+:where(.pip) h3, .pip-h3 {
+  margin: 0;
+  font: 700 var(--t-18)/1.25 var(--font-ui);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+:where(.pip) h4, .pip-h4 {
+  margin: 0;
+  font: 700 var(--t-14)/1.3 var(--font-ui);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--phos-dim);
+}
+:where(.pip) p { margin: 0; max-width: 65ch; }
+:where(.pip) ul, :where(.pip) ol { margin: 0; padding-left: 1.2em; }
+:where(.pip) small { font-size: var(--t-14); }
+:where(.pip) strong, :where(.pip) b { font-weight: 700; color: var(--phos-hi); }
+
+.pip-lede { font-size: var(--t-21); line-height: 1.45; max-width: 60ch; }
+.pip-display { font: 400 clamp(var(--t-60), 11vw, 8rem)/.85 var(--font-term); color: var(--phos-hi); text-transform: uppercase; }
+
+:where(.pip) code, :where(.pip) samp { font-family: var(--font-term); font-size: 1.2em; line-height: 1; }
+:where(.pip) pre { margin: 0; font: 400 var(--t-18)/1.25 var(--font-term); overflow-x: auto; }
+:where(.pip) pre code { font-size: inherit; line-height: inherit; }
+:where(.pip) kbd {
+  display: inline-block;
+  padding: .2em .4em;
+  border: 1px solid currentColor;
+  font: 700 .78em/1 var(--font-ui);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+:where(.pip) a {
+  color: inherit;
+  text-decoration: underline 1px var(--phos-dim);
+  text-underline-offset: .22em;
+}
+:where(.pip) a:hover { background: var(--phos); color: var(--tube); text-shadow: none; text-decoration: none; }
+
+:where(.pip) :focus-visible { outline: 2px solid var(--phos); outline-offset: 3px; }
+:where(.pip) ::selection { background: var(--phos); color: var(--tube); text-shadow: none; }
+
+:where(.pip) hr, .pip-rule {
+  height: var(--line);
+  margin: var(--s-5) 0;
+  border: 0;
+  background: linear-gradient(90deg, var(--phos-dim) 0 55%, transparent);
+}
+
+
+/* 3. Layout ---------------------------------------------------------------- */
+
+.pip-container { width: min(100% - 2rem, var(--container, 76rem)); margin-inline: auto; }
+
+.pip-stack { display: flex; flex-direction: column; gap: var(--stack-gap, var(--s-4)); }
+.pip-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--row-gap, var(--s-3)); }
+
+/* List on the left, detail on the right: the core Pip-Boy layout. */
+.pip-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--s-5) var(--s-6);
+  align-items: start;
+}
+@media (max-width: 40rem) { .pip-split { grid-template-columns: minmax(0, 1fr); } }
+
+/* A full device screen: tabs on top, body, status bar at the bottom. */
+.pip-screen {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--s-3);
+  height: 100%;
+  padding: var(--s-4) clamp(var(--s-3), 3vw, var(--s-6));
+}
+.pip-screen__panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: var(--s-4);
+  min-height: 0;
+}
+.pip-screen__body { min-height: 0; overflow: auto; scrollbar-width: thin; }
+
+
+/* 4. Screen effects -------------------------------------------------------- */
+
+/* The tube itself: curved-glass wash, vignette, scanlines, refresh band. */
+.pip-crt {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: var(--tube-radius);
+  background:
+    radial-gradient(120% 90% at 50% 42%, var(--phos-wash) 0%, var(--tube) 62%,
+      color-mix(in oklab, var(--tube) 55%, #000) 100%);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--phos) 22%, transparent),
+    inset 0 0 3.5rem rgb(0 0 0 / .82),
+    0 0 2.5rem color-mix(in srgb, var(--phos) 9%, transparent);
+}
+.pip-crt::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  border-radius: inherit;
+  background: repeating-linear-gradient(to bottom, transparent 0 2px, rgb(0 0 0 / .26) 2px 3px);
+}
+.pip-crt::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 11;
+  height: 28%;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent,
+    color-mix(in srgb, var(--phos) 7%, transparent) 55%, transparent);
+  transform: translateY(-100%);
+  animation: pip-roll 8s linear infinite;
+}
+@keyframes pip-roll { to { transform: translateY(360%); } }
+
+/* A dark metal ring around the glass, for hero-sized screens. */
+.pip-crt--bezel {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--phos) 22%, transparent),
+    inset 0 0 4rem rgb(0 0 0 / .85),
+    0 0 0 .7rem var(--bezel),
+    0 0 0 calc(.7rem + 1px) color-mix(in srgb, var(--phos) 16%, transparent),
+    0 1.5rem 4rem rgb(0 0 0 / .65);
+}
+
+/* Fixed scanlines and vignette over a whole page. Put on <body>. */
+.pip-page { min-height: 100vh; }
+.pip-page::before,
+.pip-page::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2147483000;
+}
+.pip-page::before { background: repeating-linear-gradient(to bottom, transparent 0 2px, rgb(0 0 0 / .17) 2px 3px); }
+.pip-page::after { background: radial-gradient(ellipse at center, transparent 58%, rgb(0 0 0 / .5) 100%); }
+
+/* The codemotion technique: scanlines that only darken lit pixels. */
+.pip-scanlines {
+  -webkit-mask-image: linear-gradient(to bottom, #0005 50%, #000 50%);
+  mask-image: linear-gradient(to bottom, #0005 50%, #000 50%);
+  -webkit-mask-size: 100% 3px;
+  mask-size: 100% 3px;
+}
+
+.pip-flicker { animation: pip-flicker 5s steps(1, end) infinite; }
+@keyframes pip-flicker {
+  0% { opacity: 1; }  3% { opacity: .93; }  6% { opacity: 1; }
+  41% { opacity: .97; }  43% { opacity: 1; }  77% { opacity: .95; }  78% { opacity: 1; }
+}
+
+.pip-blink { animation: pip-blink 1.05s steps(1, end) infinite; }
+@keyframes pip-blink { 50% { opacity: 0; } }
+
+.pip-cursor {
+  display: inline-block;
+  width: .55em;
+  height: 1em;
+  vertical-align: -.14em;
+  background: currentColor;
+  box-shadow: 0 0 .4em var(--glow-c);
+  animation: pip-blink 1.05s steps(1, end) infinite;
+}
+
+/* Power on: dot, then a line, then the full picture. */
+.pip-power-on { animation: pip-power-on 900ms var(--ease-crt) both; }
+@keyframes pip-power-on {
+  0%   { transform: scale(.03, .004); filter: brightness(6); }
+  28%  { transform: scale(1, .004);   filter: brightness(4); }
+  62%  { transform: scale(1, 1.015);  filter: brightness(1.6); }
+  100% { transform: none;             filter: none; }
+}
+.pip-power-off { animation: pip-power-off 420ms ease-in both; }
+@keyframes pip-power-off {
+  0%   { transform: none; filter: none; }
+  55%  { transform: scale(1, .004);   filter: brightness(4); }
+  100% { transform: scale(0, .004);   filter: brightness(8); opacity: 0; }
+}
+
+/* Effect switches, set on <html> by Pip.setFx(). */
+.pip-no-scan .pip-crt::before,
+.pip-no-scan .pip-page::before { display: none; }
+.pip-no-roll .pip-crt::after { display: none; }
+.pip-no-glow, .pip-no-glow [data-phosphor] { --glow: none; }
+.pip-no-flicker .pip-flicker { animation: none; }
+
+
+/* 5. Buttons --------------------------------------------------------------- */
+
+.pip-btn {
+  --hold: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .55em;
+  min-height: 2.5rem;
+  padding: .5em 1em;
+  border: var(--line) solid var(--phos-dim);
+  border-radius: 0;
+  background:
+    linear-gradient(90deg, var(--phos-low) calc(var(--hold) * 100%), transparent 0) no-repeat,
+    transparent;
+  color: var(--phos);
+  font: 700 var(--t-16)/1 var(--font-ui);
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  text-decoration: none;
+  text-shadow: inherit;
+  cursor: pointer;
+  user-select: none;
+}
+.pip-btn:hover,
+.pip-btn:focus-visible {
+  background: var(--phos);
+  border-color: var(--phos);
+  color: var(--tube);
+  text-shadow: none;
+  box-shadow: 0 0 1rem var(--glow-c);
+  outline: none;
+}
+.pip-btn:active { transform: translateY(1px); }
+.pip-btn--primary { background-color: var(--phos-fill); border-color: var(--phos); }
+.pip-btn--ghost { border-color: transparent; }
+.pip-btn--danger { border-color: var(--hazard); color: var(--hazard); text-shadow: 0 0 .3em var(--glow-hazard); }
+.pip-btn--danger:hover,
+.pip-btn--danger:focus-visible { background: var(--hazard); border-color: var(--hazard); color: var(--tube); box-shadow: 0 0 1rem var(--glow-hazard); }
+.pip-btn--small { min-height: 2rem; padding: .35em .7em; font-size: var(--t-14); }
+.pip-btn:disabled,
+.pip-btn[aria-disabled="true"] {
+  border-style: dashed;
+  border-color: var(--phos-low);
+  background: transparent;
+  color: var(--phos-low);
+  box-shadow: none;
+  text-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+.pip-btn kbd { font-size: .8em; }
+
+/* Hold to confirm: the fill grows while held; release early to cancel. */
+.pip-btn--hold:not(:disabled):hover,
+.pip-btn--hold:not(:disabled):focus-visible {
+  background:
+    linear-gradient(90deg, var(--phos-low) calc(var(--hold) * 100%), var(--phos-fill) 0) no-repeat;
+  color: var(--phos-hi);
+  text-shadow: var(--glow);
+}
+.pip-btn--hold[data-done],
+.pip-btn--hold[data-done]:hover { background: var(--phos); color: var(--tube); text-shadow: none; }
+
+
+/* 6. Text fields ----------------------------------------------------------- */
+
+.pip-field { display: grid; gap: var(--s-1); min-width: 0; }
+.pip-field__label {
+  font: 700 var(--t-14)/1.3 var(--font-ui);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--phos-dim);
+}
+.pip-field__help { font-size: var(--t-14); color: var(--phos-dim); }
+.pip-field__error { font-size: var(--t-14); color: var(--hazard); text-shadow: 0 0 .3em var(--glow-hazard); }
+.pip-field__error::before { content: "! "; font-weight: 700; }
+
+.pip-input,
+.pip-textarea {
+  width: 100%;
+  min-width: 0;
+  padding: .2em .35em;
+  border: 0;
+  border-bottom: var(--line) solid var(--phos-dim);
+  border-radius: 0;
+  background: transparent;
+  color: var(--phos);
+  font: 400 var(--t-24)/1.2 var(--font-term);
+  text-shadow: inherit;
+  caret-color: var(--phos);
+  caret-shape: block;
+}
+.pip-textarea {
+  min-height: 6.5em;
+  border: var(--line) solid var(--phos-low);
+  font-size: var(--t-21);
+  resize: vertical;
+}
+.pip-input::placeholder,
+.pip-textarea::placeholder { color: var(--phos-low); opacity: 1; }
+.pip-input:focus,
+.pip-textarea:focus { outline: none; background: var(--phos-wash); border-color: var(--phos); }
+.pip-input[aria-invalid="true"],
+.pip-textarea[aria-invalid="true"] { border-color: var(--hazard); }
+
+/* A terminal prompt: wrap an input to get the leading caret mark. */
+.pip-prompt { display: flex; align-items: baseline; gap: .4em; font: 400 var(--t-24)/1.2 var(--font-term); }
+.pip-prompt::before { content: ">"; }
+
+.pip-select { position: relative; display: block; min-width: 0; }
+.pip-select select {
+  width: 100%;
+  padding: .6em 2.4em .6em .75em;
+  border: var(--line) solid var(--phos-dim);
+  border-radius: 0;
+  appearance: none;
+  background: var(--phos-wash);
+  color: var(--phos);
+  font: 700 var(--t-16)/1.2 var(--font-ui);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  text-shadow: inherit;
+  cursor: pointer;
+}
+.pip-select::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: .85em;
+  width: .65em;
+  height: .5em;
+  background: currentColor;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.pip-select select:hover { border-color: var(--phos); }
+.pip-select select:focus-visible { outline: 2px solid var(--phos); outline-offset: 2px; }
+.pip-select option { background: var(--tube); color: var(--phos); }
+
+
+/* 7. Choices --------------------------------------------------------------- */
+
+.pip-check,
+.pip-radio {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: .65em;
+  cursor: pointer;
+  user-select: none;
+}
+.pip-check input,
+.pip-radio input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+}
+.pip-check__box,
+.pip-radio__box {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.05em;
+  height: 1.05em;
+  border: var(--line) solid var(--phos-dim);
+}
+.pip-radio__box { border-radius: 50%; }
+.pip-check__box::after,
+.pip-radio__box::after {
+  content: "";
+  width: .5em;
+  height: .5em;
+  background: var(--phos);
+  box-shadow: 0 0 .4em var(--glow-c);
+  transform: scale(0);
+  transition: transform 90ms steps(2);
+}
+.pip-radio__box::after { border-radius: 50%; }
+.pip-check:hover .pip-check__box,
+.pip-radio:hover .pip-radio__box,
+.pip-check input:checked + .pip-check__box,
+.pip-radio input:checked + .pip-radio__box { border-color: var(--phos); }
+.pip-check input:checked + .pip-check__box::after,
+.pip-radio input:checked + .pip-radio__box::after { transform: none; }
+.pip-check input:focus-visible + .pip-check__box,
+.pip-radio input:focus-visible + .pip-radio__box { outline: 2px solid var(--phos); outline-offset: 3px; }
+.pip-check:has(input:disabled),
+.pip-radio:has(input:disabled) { color: var(--phos-low); cursor: not-allowed; }
+
+.pip-fieldset { display: grid; gap: var(--s-2); margin: 0; padding: 0; border: 0; min-width: 0; }
+.pip-fieldset > legend { padding: 0; margin-bottom: var(--s-2); }
+
+/* ON/OFF switch. A <button role="switch" aria-checked> with two spans. */
+.pip-toggle {
+  display: inline-flex;
+  padding: 0;
+  border: var(--line) solid var(--phos-dim);
+  background: none;
+  color: var(--phos-dim);
+  font: 700 var(--t-14)/1 var(--font-ui);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  text-shadow: inherit;
+  cursor: pointer;
+}
+.pip-toggle > span { padding: .5em .8em; }
+.pip-toggle[aria-checked="true"] > :first-child,
+.pip-toggle[aria-checked="false"] > :last-child { background: var(--phos); color: var(--tube); text-shadow: none; }
+.pip-toggle:hover { border-color: var(--phos); }
+
+/* One choice from a short set. Each button may carry its own data-phosphor. */
+.pip-segmented { display: inline-flex; flex-wrap: wrap; gap: var(--gap); }
+.pip-segmented > button {
+  padding: .55em .85em;
+  border: 0;
+  background: var(--phos-wash);
+  color: var(--phos-dim);
+  font: 700 var(--t-14)/1 var(--font-ui);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  text-shadow: inherit;
+  cursor: pointer;
+}
+.pip-segmented > button:hover { background: var(--phos-fill); color: var(--phos); }
+.pip-segmented > [aria-checked="true"],
+.pip-segmented > [aria-checked="true"]:hover { background: var(--phos); color: var(--tube); text-shadow: none; }
+.pip-segmented > button:focus-visible { outline: 2px solid var(--phos); outline-offset: 2px; }
+
+/* Arrow buttons, shared by the stepper and pager. */
+.pip-arrow {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--phos-dim);
+  cursor: pointer;
+}
+.pip-arrow::before {
+  content: "";
+  width: .7rem;
+  height: .85rem;
+  background: currentColor;
+  clip-path: polygon(100% 0, 0 50%, 100% 100%);
+}
+.pip-arrow--next::before { clip-path: polygon(0 0, 100% 50%, 0 100%); }
+.pip-arrow:hover,
+.pip-arrow:focus-visible { color: var(--phos-hi); filter: drop-shadow(0 0 .3rem var(--glow-c)); }
+.pip-arrow:disabled { color: var(--phos-low); filter: none; cursor: default; }
+
+.pip-stepper { display: inline-flex; align-items: center; gap: var(--s-1); }
+.pip-stepper output {
+  min-width: 2ch;
+  font: 400 var(--t-36)/1 var(--font-term);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--phos-hi);
+}
+
+/* Segmented range. pipboy.js keeps --val in sync with the value. */
+.pip-range {
+  --val: 50%;
+  --gap-c: var(--tube);
+  width: 100%;
+  height: 1.75rem;
+  margin: 0;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+.pip-range::-webkit-slider-runnable-track {
+  height: .85rem;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 .55rem, var(--gap-c) .55rem .75rem),
+    linear-gradient(90deg, var(--phos) var(--val), var(--phos-low) var(--val));
+}
+.pip-range::-moz-range-track {
+  height: .85rem;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 .55rem, var(--gap-c) .55rem .75rem),
+    linear-gradient(90deg, var(--phos) var(--val), var(--phos-low) var(--val));
+}
+.pip-range::-webkit-slider-thumb {
+  width: .45rem;
+  height: 1.6rem;
+  margin-top: -.375rem;
+  border: 0;
+  appearance: none;
+  background: var(--phos-hi);
+  box-shadow: 0 0 .6rem var(--glow-c);
+}
+.pip-range::-moz-range-thumb {
+  width: .45rem;
+  height: 1.6rem;
+  border: 0;
+  border-radius: 0;
+  background: var(--phos-hi);
+  box-shadow: 0 0 .6rem var(--glow-c);
+}
+.pip-range:focus-visible { outline: 2px solid var(--phos); outline-offset: 4px; }
+
+
+/* 8. Tabs and paging ------------------------------------------------------- */
+
+/* Main tabs. The rule notches up around the active tab: ──┘ STAT └── */
+.pip-tabs {
+  display: flex;
+  align-items: flex-end;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.pip-tabs::-webkit-scrollbar { display: none; }
+.pip-tabs::before,
+.pip-tabs::after {
+  content: "";
+  flex: 1 0 var(--s-4);
+  border-bottom: var(--line) solid var(--phos-dim);
+}
+.pip-tabs > [role="tab"] {
+  position: relative;
+  flex: none;
+  padding: var(--s-1) clamp(.55rem, 2.2vw, 1.4rem) .6rem;
+  border: 0;
+  background: none;
+  color: var(--phos-dim);
+  font: 700 var(--t-21)/1 var(--font-ui);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  text-shadow: inherit;
+  cursor: pointer;
+}
+.pip-tabs > [role="tab"]::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  border-bottom: var(--line) solid var(--phos-dim);
+}
+.pip-tabs > [role="tab"]:hover { color: var(--phos); }
+.pip-tabs > [aria-selected="true"] { color: var(--phos-hi); }
+.pip-tabs > [aria-selected="true"]::after {
+  height: 62%;
+  border-bottom: 0;
+  border-inline: var(--line) solid var(--phos);
+}
+.pip-tabs > [role="tab"]:focus-visible { outline: 2px solid var(--phos); outline-offset: -2px; }
+
+/* Sub tabs fade with distance from the active one (pipboy.js sets --d). */
+.pip-subtabs {
+  display: flex;
+  gap: clamp(var(--s-4), 3vw, var(--s-6));
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: var(--s-1) var(--s-1);
+}
+.pip-subtabs::-webkit-scrollbar { display: none; }
+.pip-subtabs > [role="tab"] {
+  flex: none;
+  padding: .2em 0;
+  border: 0;
+  background: none;
+  color: var(--phos);
+  font: 700 var(--t-16)/1.2 var(--font-ui);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  text-shadow: inherit;
+  white-space: nowrap;
+  opacity: max(.5, calc(1 - var(--d, 0) * .2));
+  cursor: pointer;
+}
+.pip-subtabs > [role="tab"]:hover,
+.pip-subtabs > [aria-selected="true"] { opacity: 1; }
+.pip-subtabs > [aria-selected="true"] { color: var(--phos-hi); }
+
+.pip-pager {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font: 700 var(--t-14)/1 var(--font-ui);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+.pip-pager__label { min-width: 11ch; text-align: center; }
+
+
+/* 9. Lists and readouts ---------------------------------------------------- */
+
+/* Selectable list (role="listbox"). The selected row inverts. */
+.pip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pip-list > * {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: .6em;
+  padding: .28em .6em;
+  font: 400 var(--t-18)/1.3 var(--font-ui);
+  cursor: pointer;
+}
+.pip-list > *:hover { background: var(--phos-wash); }
+.pip-list > [aria-selected="true"],
+.pip-list > [aria-selected="true"]:hover {
+  background: var(--phos);
+  color: var(--tube);
+  text-shadow: none;
+  box-shadow: 0 0 1rem var(--glow-c);
+}
+.pip-list > *:focus-visible { outline: 2px solid var(--phos); outline-offset: 2px; }
+.pip-list__mark { flex: none; width: .5em; height: .5em; }
+.pip-list > [data-equipped] .pip-list__mark { background: currentColor; }
+.pip-list__qty { opacity: .78; font-variant-numeric: tabular-nums; }
+.pip-list__meta { margin-left: auto; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pip-list--compact > * { padding-block: .15em; font-size: var(--t-16); }
+
+/* Stat readout: label/value rows on filled cells, like an item card. */
+.pip-readout { display: grid; gap: var(--gap); margin: 0; }
+.pip-readout > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-4);
+  padding: .3em .7em;
+  background: var(--phos-fill);
+}
+.pip-readout dt { font: 400 var(--t-16)/1.3 var(--font-ui); }
+.pip-readout dd {
+  display: flex;
+  align-items: baseline;
+  gap: .5em;
+  margin: 0;
+  font: 700 var(--t-18)/1.3 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+}
+.pip-readout--cols { grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); }
+
+.pip-delta { display: inline-flex; align-items: center; gap: .25em; font-size: .78em; }
+.pip-delta::before { content: ""; width: .55em; height: .5em; background: currentColor; }
+.pip-delta--up { color: var(--phos-hi); }
+.pip-delta--up::before { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.pip-delta--down { color: var(--hazard); text-shadow: 0 0 .3em var(--glow-hazard); }
+.pip-delta--down::before { clip-path: polygon(0 0, 100% 0, 50% 100%); }
+
+.pip-dl { display: grid; grid-template-columns: max-content 1fr; gap: var(--s-1) var(--s-4); margin: 0; }
+.pip-dl dt { color: var(--phos-dim); }
+.pip-dl dd { margin: 0; font-variant-numeric: tabular-nums; }
+
+
+/* 10. Meters and status bar ------------------------------------------------ */
+
+/* role="meter" with aria-valuenow/max; pipboy.js sets --value (0–1).
+   Add data-rads (same units as the value) to hatch the rads from the right. */
+.pip-meter {
+  --value: 0;
+  --rads: 0;
+  display: flex;
+  align-items: center;
+  gap: .7em;
+  min-width: 0;
+  font: 700 var(--t-16)/1 var(--font-ui);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+.pip-meter__label { flex: none; min-width: var(--meter-label, 2.4em); }
+.pip-meter__value { flex: none; }
+.pip-meter__track {
+  position: relative;
+  flex: 1;
+  min-width: 3rem;
+  height: .8rem;
+  padding: 2px;
+  border: var(--line) solid var(--phos-dim);
+}
+.pip-meter__fill {
+  display: block;
+  width: calc(var(--value) * 100%);
+  height: 100%;
+  background: var(--phos);
+  box-shadow: 0 0 .6rem var(--glow-c);
+  transition: width 320ms steps(6, end);
+}
+.pip-meter__rads {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  bottom: 2px;
+  width: calc(var(--rads) * (100% - 4px));
+  background: repeating-linear-gradient(-45deg, var(--hazard) 0 2px, transparent 2px 5px);
+}
+.pip-meter--seg .pip-meter__fill {
+  -webkit-mask: repeating-linear-gradient(90deg, #000 0 .5rem, transparent .5rem .7rem);
+  mask: repeating-linear-gradient(90deg, #000 0 .5rem, transparent .5rem .7rem);
+}
+.pip-meter--bare .pip-meter__track { padding: 0; border: 0; height: .5rem; background: var(--phos-low); }
+.pip-meter--mini { font-size: var(--t-12); gap: .45em; }
+.pip-meter--mini .pip-meter__track { width: 4.5rem; flex: none; height: .55rem; padding: 1px; border-width: 1px; }
+.pip-meter--low .pip-meter__fill { animation: pip-blink 1.05s steps(1, end) infinite; }
+
+/* Bottom status bar: filled cells separated by thin seams. */
+.pip-bar { display: flex; flex-wrap: wrap; gap: var(--gap); }
+.pip-bar__cell {
+  display: flex;
+  align-items: center;
+  gap: .65em;
+  padding: .4em .8em;
+  background: var(--phos-fill);
+  font: 700 var(--t-16)/1.2 var(--font-ui);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pip-bar__cell--grow { flex: 1 1 10rem; }
+.pip-bar__cell--grow .pip-meter { flex: 1; }
+
+
+/* 11. Tables, tags, tooltips ----------------------------------------------- */
+
+.pip-table-wrap { max-width: 100%; overflow-x: auto; }
+.pip-table {
+  width: 100%;
+  border-collapse: collapse;
+  font: 400 var(--t-16)/1.35 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+}
+.pip-table th {
+  padding: .45em .7em;
+  border-bottom: var(--line) solid var(--phos-dim);
+  font: 700 var(--t-14)/1.2 var(--font-ui);
+  letter-spacing: .08em;
+  text-align: left;
+  text-transform: uppercase;
+  color: var(--phos-dim);
+  white-space: nowrap;
+}
+.pip-table td { padding: .45em .7em; vertical-align: baseline; }
+.pip-table tbody tr:nth-child(even) { background: var(--phos-wash); }
+.pip-table tbody tr:hover { background: var(--phos-fill); }
+.pip-table .num { text-align: right; }
+.pip-table caption { padding-bottom: var(--s-2); text-align: left; caption-side: top; }
+
+.pip-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: .3em .5em .25em;
+  background: var(--phos);
+  color: var(--tube);
+  font: 700 var(--t-12)/1 var(--font-ui);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  text-shadow: none;
+  vertical-align: .15em;
+  white-space: nowrap;
+}
+.pip-tag--outline { background: none; color: var(--phos); box-shadow: inset 0 0 0 1px var(--phos-dim); text-shadow: var(--glow); }
+.pip-tag--hazard { background: var(--hazard); }
+
+/* data-pip-tip="text" on any element without its own ::after. */
+[data-pip-tip] { position: relative; }
+[data-pip-tip]::after {
+  content: attr(data-pip-tip);
+  position: absolute;
+  bottom: calc(100% + .5rem);
+  left: 50%;
+  z-index: 20;
+  padding: .4em .6em;
+  background: var(--phos);
+  color: var(--tube);
+  font: 700 var(--t-12)/1 var(--font-ui);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  text-shadow: none;
+  white-space: nowrap;
+  opacity: 0;
+  translate: -50% 0;
+  pointer-events: none;
+  transition: opacity 120ms steps(2);
+}
+[data-pip-tip]:hover::after,
+[data-pip-tip]:focus-visible::after { opacity: 1; }
+
+
+/* 12. Panels and disclosures ----------------------------------------------- */
+
+/* Titled frame. The sides fade out downward, like the HUD brackets. */
+.pip-panel { position: relative; padding: 0 var(--s-4) var(--s-4); min-width: 0; }
+.pip-panel::before {
+  content: "";
+  position: absolute;
+  inset: .75rem 0 0;
+  border: var(--line) solid var(--phos-dim);
+  border-block: 0;
+  -webkit-mask-image: linear-gradient(#000, transparent 70%);
+  mask-image: linear-gradient(#000, transparent 70%);
+  pointer-events: none;
+}
+.pip-panel__title {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  margin: 0 calc(-1 * var(--s-4)) var(--s-3);
+  font: 700 var(--t-14)/1.5rem var(--font-ui);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.pip-panel__title::before { content: ""; width: .8rem; flex: none; border-top: var(--line) solid var(--phos-dim); }
+.pip-panel__title::after { content: ""; flex: 1; border-top: var(--line) solid var(--phos-dim); }
+.pip-panel--closed::before { border-bottom: var(--line) solid var(--phos-dim); -webkit-mask-image: none; mask-image: none; }
+
+.pip-disclosure { border-top: var(--line) solid var(--phos-low); }
+.pip-disclosure:last-of-type { border-bottom: var(--line) solid var(--phos-low); }
+.pip-disclosure > summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s-4);
+  padding: var(--s-3) var(--s-2);
+  font: 700 var(--t-18)/1.3 var(--font-ui);
+  letter-spacing: .02em;
+  list-style: none;
+  cursor: pointer;
+}
+.pip-disclosure > summary::-webkit-details-marker { display: none; }
+.pip-disclosure > summary::after { content: "+"; flex: none; font: 400 var(--t-24)/.8 var(--font-term); }
+.pip-disclosure[open] > summary::after { content: "-"; }
+.pip-disclosure > summary:hover { background: var(--phos-wash); }
+.pip-disclosure > summary:focus-visible { outline: 2px solid var(--phos); outline-offset: -2px; }
+.pip-disclosure__body { padding: 0 var(--s-2) var(--s-4); color: var(--phos-dim); }
+
+.pip-empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-2);
+  padding: var(--s-5);
+  border: var(--line) dashed var(--phos-low);
+  color: var(--phos-dim);
+  text-align: center;
+}
+
+
+/* 13. Alerts, toasts, dialogs, loaders ------------------------------------- */
+
+.pip-alert {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: .2em .9em;
+  align-items: start;
+  padding: var(--s-3) var(--s-4);
+  border: var(--line) solid var(--phos-dim);
+  background: var(--phos-wash);
+}
+.pip-alert__icon {
+  display: grid;
+  place-items: center;
+  grid-row: span 2;
+  width: 1.9rem;
+  height: 1.9rem;
+  background: var(--phos);
+  color: var(--tube);
+  font: 700 var(--t-21)/1 var(--font-ui);
+  text-shadow: none;
+}
+.pip-alert__title { font: 700 var(--t-16)/1.4 var(--font-ui); letter-spacing: .06em; text-transform: uppercase; }
+.pip-alert__body { font-size: var(--t-16); color: var(--phos-dim); }
+.pip-alert--caution { border-style: dashed; }
+.pip-alert--critical {
+  border-color: var(--hazard);
+  background: color-mix(in oklab, var(--hazard) 9%, var(--tube));
+  color: var(--hazard);
+  text-shadow: 0 0 .3em var(--glow-hazard);
+  animation: pip-alarm 1.8s steps(1, end) infinite;
+}
+.pip-alert--critical .pip-alert__icon { background: var(--hazard); }
+.pip-alert--critical .pip-alert__body { color: inherit; }
+/* After the codemotion blink-bg: the glow swells on a slow beat. */
+@keyframes pip-alarm {
+  0%, 60%  { text-shadow: 0 0 .3em var(--glow-hazard); box-shadow: none; }
+  70%, 100% { text-shadow: 0 0 1.2em var(--hazard); box-shadow: 0 0 1.4rem var(--glow-hazard); }
+}
+
+.pip-toasts {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + var(--pip-toast-top, 1rem));
+  left: 1rem;
+  z-index: 2147482000;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  width: min(22rem, calc(100vw - 2rem));
+  color: var(--phos);
+  text-shadow: var(--glow);
+  pointer-events: none;
+}
+.pip-toasts *, .pip-dialog * { box-sizing: border-box; }
+.pip-toast {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: .1em .85em;
+  padding: .6em .9em;
+  border-left: 3px solid var(--phos);
+  background: color-mix(in srgb, var(--tube) 92%, transparent);
+  box-shadow: 0 0 1.5rem rgb(0 0 0 / .6), 0 0 0 1px var(--phos-low);
+  pointer-events: auto;
+  animation: pip-toast-in 240ms steps(4, end) both;
+}
+.pip-toast__icon {
+  display: grid;
+  place-items: center;
+  grid-row: span 2;
+  width: 2.1rem;
+  height: 2.1rem;
+  border: var(--line) solid var(--phos);
+  font: 400 var(--t-24)/1 var(--font-term);
+}
+.pip-toast__title { font: 700 var(--t-12)/1.3 var(--font-ui); letter-spacing: .1em; text-transform: uppercase; color: var(--phos-dim); }
+.pip-toast__body { font: 400 var(--t-18)/1.25 var(--font-ui); }
+.pip-toast.is-leaving { animation: pip-toast-out 280ms steps(3, end) both; }
+@keyframes pip-toast-in { from { opacity: 0; transform: translateX(-1.5rem); } }
+@keyframes pip-toast-out { to { opacity: 0; } }
+
+.pip-dialog {
+  width: min(30rem, calc(100vw - 2rem));
+  max-width: none;
+  padding: 0;
+  border: var(--line) solid var(--phos);
+  background: var(--tube);
+  color: var(--phos);
+  font: 400 var(--t-18)/1.5 var(--font-ui);
+  text-shadow: var(--glow);
+  box-shadow: 0 0 3rem var(--glow-c), inset 0 0 2.5rem rgb(0 0 0 / .75);
+}
+.pip-dialog[open] { animation: pip-dialog-in 260ms var(--ease-crt) both; }
+.pip-dialog::backdrop { background: rgb(0 0 0 / .74); }
+.pip-dialog__body { display: grid; gap: var(--s-3); padding: var(--s-5) var(--s-5) var(--s-4); text-align: center; }
+.pip-dialog__body h2 {
+  margin: 0;
+  font: 700 var(--t-21)/1.2 var(--font-ui);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  text-wrap: balance;
+  color: var(--phos-hi);
+}
+.pip-dialog__body p { max-width: 40ch; margin: 0 auto; color: var(--phos-dim); }
+.pip-dialog__actions { display: flex; gap: var(--gap); margin-top: var(--s-2); }
+.pip-dialog__actions > * { flex: 1; }
+@keyframes pip-dialog-in { from { transform: scaleY(.02); filter: brightness(3); } }
+
+/* Indeterminate loader: three lit cells sweep across ten. */
+.pip-loader {
+  display: inline-grid;
+  justify-items: center;
+  gap: var(--s-3);
+  font: 400 var(--t-24)/1 var(--font-term);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.pip-loader__bar {
+  position: relative;
+  width: 12rem;
+  height: .7rem;
+  overflow: hidden;
+  background: repeating-linear-gradient(90deg, var(--phos-low) 0 .9rem, transparent .9rem 1.2rem);
+}
+.pip-loader__bar::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3.6rem;
+  background: repeating-linear-gradient(90deg, var(--phos) 0 .9rem, transparent .9rem 1.2rem);
+  box-shadow: 0 0 .6rem var(--glow-c);
+  animation: pip-sweep 1.3s steps(13, end) infinite;
+}
+@keyframes pip-sweep { from { transform: translateX(-3.6rem); } to { transform: translateX(12rem); } }
+
+
+/* 14. HUD: compass, map, scope, condition ---------------------------------- */
+
+/* Compass strip. pipboy.js builds the ticks; set the heading with --heading. */
+.pip-compass {
+  --heading: 0;
+  --ppd: 4px;                     /* pixels per degree */
+  position: relative;
+  height: 2.8rem;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+}
+.pip-compass::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: .8rem;
+  height: .45rem;
+  background: var(--phos-hi);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  translate: -50% 0;
+}
+.pip-compass__strip {
+  position: absolute;
+  inset: 0 auto 0 50%;
+  width: calc(1080 * var(--ppd));
+  transform: translateX(calc((var(--heading) + 360) * var(--ppd) * -1));
+  transition: transform 160ms steps(4, end);
+}
+.pip-compass__tick {
+  position: absolute;
+  bottom: .5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 0;
+  font: 700 var(--t-14)/1 var(--font-ui);
+  letter-spacing: .04em;
+}
+.pip-compass__tick::after { content: ""; flex: none; width: var(--line); height: .45rem; margin-top: .2rem; background: var(--phos-low); }
+.pip-compass__tick.is-major::after { height: .8rem; background: var(--phos); }
+.pip-compass__marker {
+  position: absolute;
+  top: .15rem;
+  width: .75rem;
+  height: .7rem;
+  background: var(--phos);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  translate: -50% 0;
+}
+.pip-compass__marker[data-kind="place"] { clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+.pip-compass__marker[data-kind="hostile"] { width: .35rem; height: .9rem; background: var(--hazard); clip-path: none; }
+
+/* Map: pipboy.js draws contour lines on the canvas; markers are buttons. */
+.pip-map {
+  position: relative;
+  max-width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: var(--phos-wash);
+  box-shadow: inset 0 0 0 var(--line) var(--phos-low);
+}
+.pip-map canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pip-map__marker {
+  position: absolute;
+  top: var(--y);
+  left: var(--x);
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--phos);
+  translate: -50% -50%;
+  cursor: pointer;
+}
+.pip-map__marker::before {
+  content: "";
+  width: .9rem;
+  height: .9rem;
+  background: currentColor;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+.pip-map__marker[data-kind="quest"]::before { clip-path: polygon(50% 100%, 0 0, 100% 0); }
+.pip-map__marker[data-kind="unknown"]::before { clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%, 50% 0, 50% 22%, 22% 50%, 50% 78%, 78% 50%, 50% 22%); }
+.pip-map__marker:hover,
+.pip-map__marker[aria-pressed="true"] { color: var(--phos-hi); filter: drop-shadow(0 0 .35rem var(--glow-c)); }
+.pip-map__label {
+  position: absolute;
+  top: var(--y);
+  left: var(--x);
+  padding: .3em .45em;
+  border: 1px solid var(--phos-dim);
+  background: var(--tube);
+  font: 700 var(--t-12)/1 var(--font-ui);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate(1rem, -50%);
+  pointer-events: none;
+}
+.pip-map__marker:hover + .pip-map__label,
+.pip-map__marker:focus-visible + .pip-map__label,
+.pip-map__marker[aria-pressed="true"] + .pip-map__label { opacity: 1; }
+.pip-map__player {
+  position: absolute;
+  top: var(--y);
+  left: var(--x);
+  width: 1.1rem;
+  height: 1.3rem;
+  background: var(--phos-hi);
+  clip-path: polygon(50% 0, 100% 100%, 50% 72%, 0 100%);
+  translate: -50% -50%;
+  rotate: var(--r, 0deg);
+}
+
+/* Oscilloscope (radio): pipboy.js draws the waveform. */
+.pip-scope {
+  position: relative;
+  max-width: 100%;
+  aspect-ratio: 1;
+  border-left: var(--line) solid var(--phos-dim);
+  border-bottom: var(--line) solid var(--phos-dim);
+}
+.pip-scope canvas { display: block; width: 100%; height: 100%; }
+
+/* Limb condition: a figure with a small meter at each limb. */
+.pip-condition {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-areas: ".    head ." "larm fig  rarm" "lleg fig  rleg";
+  align-items: center;
+  justify-items: center;
+  gap: var(--s-2) var(--s-4);
+}
+.pip-condition__figure { grid-area: fig; width: clamp(5.5rem, 16vw, 8.5rem); color: var(--phos); filter: drop-shadow(0 0 .4rem var(--glow-c)); }
+.pip-condition [data-limb="head"] { grid-area: head; }
+.pip-condition [data-limb="larm"] { grid-area: larm; justify-self: end; }
+.pip-condition [data-limb="rarm"] { grid-area: rarm; justify-self: start; }
+.pip-condition [data-limb="lleg"] { grid-area: lleg; justify-self: end; align-self: end; }
+.pip-condition [data-limb="rleg"] { grid-area: rleg; justify-self: start; align-self: end; }
+
+
+/* 15. Terminal and hacking ------------------------------------------------- */
+
+.pip-terminal {
+  padding: var(--s-5) clamp(var(--s-4), 4vw, var(--s-7));
+  font: 400 var(--t-24)/1.15 var(--font-term);
+  letter-spacing: .02em;
+}
+.pip-terminal p,
+.pip-terminal__line { max-width: none; min-height: 1.15em; margin: 0; white-space: pre-wrap; }
+.pip-terminal__head { margin-bottom: 1.15em; text-align: center; }
+.pip-terminal__menu { display: grid; justify-items: start; margin: 1.15em 0; padding: 0; list-style: none; }
+.pip-terminal__menu :is(button, a) {
+  padding: 0 .3em;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  text-shadow: inherit;
+  cursor: pointer;
+}
+.pip-terminal__menu :is(button, a)::before { content: "["; }
+.pip-terminal__menu :is(button, a)::after { content: "]"; }
+.pip-terminal__menu :is(button, a):is(:hover, :focus-visible) {
+  background: var(--phos);
+  color: var(--tube);
+  text-shadow: none;
+  outline: none;
+}
+.pip-terminal__prompt { display: flex; align-items: baseline; gap: .4em; }
+.pip-terminal__prompt::before { content: ">"; }
+.pip-terminal__prompt:focus-within { background: var(--phos-wash); }
+.pip-terminal__prompt input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-shadow: inherit;
+  caret-color: var(--phos);
+  caret-shape: block;
+}
+
+/* Password minigame. pipboy.js fills [data-pip-hack]. */
+.pip-hack { font: 400 var(--t-21)/1.2 var(--font-term); letter-spacing: .03em; }
+.pip-hack__head { margin-bottom: 1em; }
+.pip-hack__head p { margin: 0; max-width: none; }
+.pip-hack__warn { color: var(--hazard); text-shadow: 0 0 .3em var(--glow-hazard); }
+.pip-hack__tries { display: inline-flex; gap: .45em; margin-left: .5em; vertical-align: -.1em; }
+.pip-hack__tries i { width: .6em; height: .95em; background: currentColor; }
+.pip-hack__grid { display: flex; flex-wrap: wrap; gap: .6em 2.5ch; }
+.pip-hack__col { display: grid; }
+.pip-hack__row { display: flex; gap: 1.5ch; white-space: pre; }
+.pip-hack__addr { color: var(--phos-dim); }
+.pip-hack__word {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-shadow: inherit;
+  cursor: pointer;
+}
+.pip-hack__word:is(:hover, :focus-visible) { background: var(--phos); color: var(--tube); text-shadow: none; outline: none; }
+.pip-hack__word:disabled { color: var(--phos-low); cursor: default; background: none; }
+.pip-hack__log {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: 15ch;
+  min-height: 100%;
+  white-space: pre;
+}
+
+
+/* 16. Utilities and motion preferences ------------------------------------- */
+
+.pip-dim { color: var(--phos-dim); }
+.pip-hi { color: var(--phos-hi); }
+.pip-hazard { color: var(--hazard); text-shadow: 0 0 .3em var(--glow-hazard); }
+.pip-term { font-family: var(--font-term); }
+.pip-num { font-variant-numeric: tabular-nums; }
+.pip-caps { text-transform: uppercase; letter-spacing: .07em; }
+.pip-invert { background: var(--phos); color: var(--tube); text-shadow: none; }
+.pip-noglow { text-shadow: none; }
+.pip-sr {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pip-crt::after { display: none; }
+  .pip-flicker,
+  .pip-blink,
+  .pip-cursor,
+  .pip-power-on,
+  .pip-power-off,
+  .pip-meter--low .pip-meter__fill,
+  .pip-alert--critical,
+  .pip-toast,
+  .pip-toast.is-leaving,
+  .pip-dialog[open] { animation: none; }
+  .pip-loader__bar::after { animation-duration: 4s; }
+  .pip-meter__fill,
+  .pip-compass__strip { transition: none; }
+}

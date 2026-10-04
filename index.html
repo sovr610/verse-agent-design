@@ -1,0 +1,1422 @@
+<!doctype html>
+<html lang="en" data-phosphor="p1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pip-OS Interface Kit</title>
+<meta name="description" content="A phosphor-tube component library for building Pip-Boy style interfaces.">
+<link rel="stylesheet" href="css/pipboy.css">
+<style>
+  /* Docs page only. Layout: sticky header; hero = live device left, intro right;
+     docs = sticky index left, component sections right. Every color is a kit token. */
+  html { scroll-padding-top: 5.5rem; }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+
+  .kit-skip { position: absolute; top: -5rem; left: 1rem; z-index: 200; }
+  .kit-skip:focus { top: 1rem; }
+
+  /* Header */
+  .kit-top {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 60;
+    border-bottom: var(--line) solid var(--phos-low);
+    background: color-mix(in srgb, var(--void) 90%, transparent);
+    backdrop-filter: blur(6px);
+  }
+  .kit-top__inner { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3) var(--s-5); padding-block: var(--s-2); }
+  .kit-brand { display: flex; align-items: baseline; gap: .65rem; text-decoration: none; }
+  .kit-brand:hover { background: none; color: inherit; text-shadow: inherit; }
+  .kit-brand__mark { font: 400 var(--t-36)/1 var(--font-term); color: var(--phos-hi); }
+  .kit-brand__name { font: 700 var(--t-12)/1 var(--font-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--phos-dim); }
+  .kit-top__nav { display: flex; gap: var(--s-2); margin-left: auto; font: 700 var(--t-14)/1 var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }
+  .kit-top__nav a { padding: .5em .6em; text-decoration: none; }
+  @media (max-width: 44rem) { .kit-top__nav { display: none; } .kit-top .pip-segmented { margin-left: auto; } }
+  @media (max-width: 30rem) { .kit-brand__name { display: none; } }
+  body { background: var(--void); }
+
+  /* Hero */
+  .kit-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(15rem, 20rem);
+    grid-template-areas: "device intro" "device setup";
+    align-items: start;
+    gap: var(--s-6) var(--s-7);
+    padding-block: var(--s-7) var(--s-8);
+  }
+  .kit-hero__intro { grid-area: intro; display: grid; gap: var(--s-4); min-width: 0; }
+  .kit-hero__device { grid-area: device; min-width: 0; }
+  .kit-hero__setup { grid-area: setup; display: grid; gap: var(--s-5); min-width: 0; }
+  @media (max-width: 62rem) {
+    .kit-hero { grid-template-columns: minmax(0, 1fr); grid-template-areas: "intro" "device" "setup"; padding-block: var(--s-6); }
+  }
+  .kit-title { margin: 0; font: 400 clamp(4.5rem, 10vw, 7rem)/.78 var(--font-term); color: var(--phos-hi); }
+  .kit-title span { display: block; margin-top: .7rem; font: 700 var(--t-16)/1.2 var(--font-ui); letter-spacing: .16em; color: var(--phos-dim); }
+  .kit-snippet { padding: var(--s-3) var(--s-4); border: 1px solid var(--phos-low); background: var(--tube); font-size: var(--t-16); }
+  .kit-keys { font-size: var(--t-14); color: var(--phos-dim); }
+  .kit-keys kbd { margin-inline: .1em; }
+
+  /* The live device */
+  .kit-device { height: clamp(34rem, 76vh, 41rem); margin: .75rem; }
+  .kit-boot { position: absolute; inset: 0; z-index: 5; overflow: hidden; }
+  .kit-boot .pip-terminal { padding-top: var(--s-6); font-size: clamp(var(--t-18), 2.4vw, var(--t-24)); }
+  .kit-pipboy .pip-tabs > [role="tab"] { font-size: clamp(var(--t-16), 2vw, var(--t-21)); }
+  .kit-pipboy .pip-bar__cell { font-size: var(--t-14); }
+  .kit-fill { height: 100%; }
+  .kit-status { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 15rem); align-items: center; gap: var(--s-5) var(--s-6); min-height: 100%; }
+  .kit-status__side { display: grid; gap: var(--s-4); min-width: 0; }
+  .kit-status__name { font: 700 var(--t-16)/1.3 var(--font-ui); letter-spacing: .06em; text-transform: uppercase; }
+  .kit-detail { display: grid; align-content: start; gap: var(--s-3); min-width: 0; }
+  .kit-detail p { color: var(--phos-dim); }
+  .kit-detail__big { font: 400 var(--t-72)/.8 var(--font-term); color: var(--phos-hi); }
+  .kit-rank { display: inline-flex; gap: 4px; }
+  .kit-rank i { width: .6em; height: .6em; border: var(--line) solid currentColor; }
+  .kit-rank i.on { background: currentColor; }
+  .kit-objectives { display: grid; gap: var(--s-2); margin: 0; padding: 0; list-style: none; }
+  .kit-objectives li { display: flex; align-items: baseline; gap: .65em; }
+  .kit-objectives li::before { content: ""; flex: none; width: .65em; height: .65em; border: var(--line) solid currentColor; translate: 0 .05em; }
+  .kit-objectives li.done { color: var(--phos-dim); }
+  .kit-objectives li.done::before { background: currentColor; }
+  .kit-pipboy .pip-map { height: 100%; min-height: 15rem; aspect-ratio: auto; }
+  .kit-radio__scope { display: grid; justify-items: center; align-content: start; gap: var(--s-3); }
+  .kit-radio__scope .pip-scope { width: min(100%, 17rem); }
+  .kit-bar-range { width: 7rem; --gap-c: var(--phos-fill); }
+  @media (max-width: 40rem) {
+    .kit-device { height: auto; min-height: 36rem; --tube-radius: 1rem; margin: .6rem .5rem; }
+    .kit-status { grid-template-columns: minmax(0, 1fr); }
+    .kit-pipboy .pip-map { height: auto; aspect-ratio: 4 / 3; }
+  }
+
+  /* Docs */
+  .kit-docs { display: grid; grid-template-columns: 12.5rem minmax(0, 1fr); gap: var(--s-7); padding-block: var(--s-6) var(--s-8); border-top: var(--line) solid var(--phos-low); }
+  .kit-index { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 5rem); align-self: start; display: grid; gap: var(--s-4); max-height: calc(100vh - 6rem); overflow: auto; scrollbar-width: thin; }
+  .kit-index h2 { margin-bottom: var(--s-1); font: 700 var(--t-12)/1.2 var(--font-ui); letter-spacing: .14em; color: var(--phos-dim); }
+  .kit-index ul { display: grid; margin: 0; padding: 0; list-style: none; }
+  .kit-index a { display: block; padding: .18em .55em; font-size: var(--t-16); text-decoration: none; }
+  .kit-index a[aria-current="true"] { background: var(--phos); color: var(--tube); text-shadow: none; }
+  @media (max-width: 56rem) {
+    .kit-docs { grid-template-columns: minmax(0, 1fr); gap: var(--s-6); }
+    .kit-index { position: static; max-height: none; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); }
+  }
+  .kit-sections { display: flex; flex-direction: column; gap: var(--s-8); min-width: 0; }
+  .kit-intro { display: grid; gap: var(--s-3); }
+  .kit-section { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-4); }
+  .kit-section > .pip-panel__title { margin-inline: 0; }
+  .kit-section > .pip-panel__title { margin-bottom: 0; font-size: var(--t-21); }
+  .kit-section__lede { color: var(--phos-dim); }
+  .kit-section__lede code { color: var(--phos); }
+  .kit-section h3.kit-sub { margin-top: var(--s-3); }
+
+  .kit-demo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--s-4);
+    padding: var(--s-5);
+    border: 1px solid var(--phos-low);
+    background: radial-gradient(130% 120% at 50% 0%, var(--phos-wash), var(--tube) 70%);
+  }
+  .kit-demo--stack { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
+  .kit-demo--stack > * { flex: none; }
+  .kit-demo--grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); align-items: start; }
+  .kit-demo > .pip-split,
+  .kit-demo > .pip-table-wrap,
+  .kit-demo > .pip-crt,
+  .kit-demo > .pip-map,
+  .kit-demo > .pip-compass { flex: 1 1 100%; }
+  .kit-demo > .pip-crt { min-height: 12rem; }
+  .kit-demo .pip-field { flex: 1 1 14rem; }
+  .kit-demo .pip-fieldset { flex: 1 1 12rem; }
+  .kit-demo .pip-alert { flex: 1 1 100%; }
+  .kit-demo > .pip-panel { flex: 1 1 18rem; }
+  .kit-demo > .pip-disclosure { flex: 1 1 100%; }
+
+  .kit-code { margin-top: calc(-1 * var(--s-4) + var(--gap)); }
+  .kit-code > summary {
+    display: flex;
+    justify-content: space-between;
+    padding: .5em .9em;
+    background: var(--phos-wash);
+    font: 700 var(--t-12)/1.2 var(--font-ui);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--phos-dim);
+    list-style: none;
+    cursor: pointer;
+  }
+  .kit-code > summary::-webkit-details-marker { display: none; }
+  .kit-code > summary::after { content: "+"; font: 400 var(--t-18)/.8 var(--font-term); }
+  .kit-code[open] > summary::after { content: "-"; }
+  .kit-code > summary:hover { color: var(--phos); }
+  .kit-code__body { position: relative; border: 1px solid var(--phos-low); border-top: 0; background: var(--void); }
+  .kit-code__body pre { max-height: 26rem; padding: var(--s-4); font-size: var(--t-18); line-height: 1.2; }
+  .kit-code__body .kit-copy { position: absolute; top: var(--s-2); right: var(--s-3); }
+  .tok-tag { color: var(--phos-hi); }
+  .tok-attr { color: var(--phos-dim); }
+
+  /* Tokens */
+  .kit-tubes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr)); gap: var(--s-3); }
+  .kit-tube {
+    display: grid;
+    justify-items: start;
+    gap: var(--s-1);
+    padding: var(--s-4);
+    border: var(--line) solid var(--phos-low);
+    background: radial-gradient(120% 100% at 50% 20%, var(--phos-wash), var(--tube));
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .kit-tube:hover { border-color: var(--phos-dim); }
+  .kit-tube[aria-pressed="true"] { border-color: var(--phos); box-shadow: 0 0 1.2rem var(--glow-c); }
+  .kit-tube__id { font: 400 var(--t-60)/.8 var(--font-term); color: var(--phos-hi); }
+  .kit-tube__name { font: 700 var(--t-16)/1.2 var(--font-ui); letter-spacing: .08em; text-transform: uppercase; }
+  .kit-tube__meta { font-size: var(--t-14); color: var(--phos-dim); }
+  .kit-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr)); gap: var(--s-4) var(--s-3); }
+  .kit-swatch { display: grid; gap: .3rem; font-size: var(--t-14); }
+  .kit-swatch__chip { height: 3.25rem; background: var(--c); box-shadow: inset 0 0 0 1px var(--phos-low); }
+  .kit-swatch code { font-size: var(--t-18); color: var(--phos-hi); }
+  .kit-swatch span { color: var(--phos-dim); }
+  .kit-type { display: grid; gap: var(--s-3); }
+  .kit-type__row { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); align-items: baseline; gap: var(--s-4); padding-top: var(--s-3); border-top: 1px solid var(--phos-low); }
+  .kit-type__meta { font-size: var(--t-12); letter-spacing: .08em; text-transform: uppercase; color: var(--phos-dim); }
+  @media (max-width: 36rem) { .kit-type__row { grid-template-columns: minmax(0, 1fr); gap: var(--s-1); } }
+
+  /* Examples */
+  .kit-examples { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: var(--s-4); }
+  .kit-example { display: grid; align-content: start; gap: var(--s-3); padding: var(--s-4); border: var(--line) solid var(--phos-low); background: var(--tube); text-decoration: none; }
+  .kit-example:hover { border-color: var(--phos); background: var(--phos-wash); color: var(--phos); text-shadow: var(--glow); box-shadow: 0 0 1.4rem var(--glow-c); }
+  .kit-example pre { font-size: var(--t-16); line-height: 1.05; color: var(--phos-dim); overflow: hidden; }
+  .kit-example p { font-size: var(--t-16); color: var(--phos-dim); }
+  .kit-example__go { font: 700 var(--t-14)/1 var(--font-ui); letter-spacing: .1em; text-transform: uppercase; }
+
+  .kit-foot { padding-block: var(--s-6) var(--s-7); border-top: var(--line) solid var(--phos-low); font-size: var(--t-14); color: var(--phos-dim); }
+  .kit-foot p + p { margin-top: var(--s-2); }
+</style>
+</head>
+<body class="pip pip-page">
+<a class="pip-btn kit-skip" href="#components">Skip to components</a>
+
+<header class="kit-top">
+  <div class="pip-container kit-top__inner">
+    <a class="kit-brand" href="#top"><span class="kit-brand__mark">PIP-OS</span><span class="kit-brand__name">Interface kit 1.0</span></a>
+    <nav class="kit-top__nav" aria-label="Page">
+      <a href="#components">Components</a>
+      <a href="#examples">Examples</a>
+    </nav>
+    <div class="pip-segmented" role="radiogroup" aria-label="Screen tube" data-pip-phosphor-switch>
+      <button type="button" role="radio" value="p1" data-phosphor="p1">P1</button>
+      <button type="button" role="radio" value="p3" data-phosphor="p3">P3</button>
+      <button type="button" role="radio" value="p4" data-phosphor="p4">P4</button>
+      <button type="button" role="radio" value="p7" data-phosphor="p7">P7</button>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- HERO: a working Pip-Boy ===================================================== -->
+<section class="pip-container kit-hero" aria-labelledby="kit-title">
+  <div class="kit-hero__intro">
+    <h1 class="kit-title" id="kit-title">Pip-OS<span>Interface kit</span></h1>
+    <p class="pip-lede">A stylesheet and a script for building screens that look like they run on a Pip-Boy. Every color comes from one phosphor tube, so switching tubes repaints the whole page.</p>
+  </div>
+
+  <div class="kit-hero__device">
+    <div class="pip-crt pip-crt--bezel pip-flicker kit-device" id="device" aria-label="Live Pip-Boy demo" role="region">
+      <div class="pip-screen kit-pipboy" id="pipboy">
+        <div class="pip-tabs" role="tablist" aria-label="Pip-Boy" data-pip-tabs>
+          <button type="button" role="tab" id="t-stat" aria-controls="p-stat" aria-selected="true">Stat</button>
+          <button type="button" role="tab" id="t-inv" aria-controls="p-inv">Inv</button>
+          <button type="button" role="tab" id="t-data" aria-controls="p-data">Data</button>
+          <button type="button" role="tab" id="t-map" aria-controls="p-map">Map</button>
+          <button type="button" role="tab" id="t-radio" aria-controls="p-radio">Radio</button>
+        </div>
+
+        <!-- STAT -->
+        <section class="pip-screen__panel" role="tabpanel" id="p-stat" aria-labelledby="t-stat">
+          <div class="pip-subtabs" role="tablist" aria-label="Stat" data-pip-tabs>
+            <button type="button" role="tab" id="t-status" aria-controls="p-status" aria-selected="true">Status</button>
+            <button type="button" role="tab" id="t-special" aria-controls="p-special">Special</button>
+            <button type="button" role="tab" id="t-perks" aria-controls="p-perks">Perks</button>
+          </div>
+          <div class="pip-screen__body">
+            <div class="kit-status" role="tabpanel" id="p-status" aria-labelledby="t-status">
+              <div class="pip-condition">
+                <svg class="pip-condition__figure" viewBox="0 0 100 190" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="50" cy="25" r="17" style="fill: var(--phos-fill)"/>
+                  <path d="M43 23h.01M57 23h.01" stroke-width="5"/>
+                  <path d="M43 31q7 5 14 0"/>
+                  <path d="M50 42v6"/>
+                  <rect x="33" y="48" width="34" height="56" rx="8" style="fill: var(--phos-fill)"/>
+                  <path d="M33 56 19 99M67 56l14 43" stroke-width="7"/>
+                  <path d="M43 104l-4 70M57 104l4 70" stroke-width="8"/>
+                </svg>
+                <div class="pip-meter pip-meter--mini" data-limb="head" role="meter" aria-label="Head condition" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"><span class="pip-meter__track"><span class="pip-meter__fill"></span></span></div>
+                <div class="pip-meter pip-meter--mini" data-limb="larm" role="meter" aria-label="Left arm condition" aria-valuenow="92" aria-valuemin="0" aria-valuemax="100"><span class="pip-meter__track"><span class="pip-meter__fill"></span></span></div>
+                <div class="pip-meter pip-meter--mini" data-limb="rarm" role="meter" aria-label="Right arm condition" aria-valuenow="64" aria-valuemin="0" aria-valuemax="100"><span class="pip-meter__track"><span class="pip-meter__fill"></span></span></div>
+                <div class="pip-meter pip-meter--mini" data-limb="lleg" role="meter" aria-label="Left leg condition" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"><span class="pip-meter__track"><span class="pip-meter__fill"></span></span></div>
+                <div class="pip-meter pip-meter--mini pip-meter--low" data-limb="rleg" role="meter" aria-label="Right leg condition, crippled" aria-valuenow="18" aria-valuemin="0" aria-valuemax="100"><span class="pip-meter__track"><span class="pip-meter__fill"></span></span></div>
+              </div>
+              <div class="kit-status__side">
+                <p class="kit-status__name">Ada Okafor</p>
+                <div class="pip-meter" role="meter" aria-label="Health, 30 rads absorbed" aria-valuenow="182" aria-valuemin="0" aria-valuemax="230" data-rads="30">
+                  <span class="pip-meter__label">HP</span>
+                  <span class="pip-meter__track"><span class="pip-meter__fill"></span><span class="pip-meter__rads"></span></span>
+                </div>
+                <dl class="pip-readout">
+                  <div><dt>Damage</dt><dd>48</dd></div>
+                  <div><dt>Damage resist</dt><dd>112</dd></div>
+                  <div><dt>Energy resist</dt><dd>60</dd></div>
+                  <div><dt>Rad resist</dt><dd>35</dd></div>
+                </dl>
+                <p class="pip-dim">Right leg crippled. Use a Stimpak or see a doctor.</p>
+              </div>
+            </div>
+            <div class="pip-split kit-fill" role="tabpanel" id="p-special" aria-labelledby="t-special" hidden>
+              <ul class="pip-list" role="listbox" aria-label="S.P.E.C.I.A.L." data-pip-list id="special-list"></ul>
+              <div class="kit-detail" id="special-detail" aria-live="polite"></div>
+            </div>
+            <div class="pip-split kit-fill" role="tabpanel" id="p-perks" aria-labelledby="t-perks" hidden>
+              <ul class="pip-list" role="listbox" aria-label="Perks" data-pip-list id="perk-list"></ul>
+              <div class="kit-detail" id="perk-detail" aria-live="polite"></div>
+            </div>
+          </div>
+          <div class="pip-bar">
+            <div class="pip-bar__cell">HP 182/230</div>
+            <div class="pip-bar__cell pip-bar__cell--grow">Level 21
+              <div class="pip-meter pip-meter--bare" role="meter" aria-label="Experience toward level 22" aria-valuenow="3120" aria-valuemin="0" aria-valuemax="4400"><span class="pip-meter__track"><span class="pip-meter__fill"></span></span></div>
+            </div>
+            <div class="pip-bar__cell">AP 90/90</div>
+          </div>
+        </section>
+
+        <!-- INV -->
+        <section class="pip-screen__panel" role="tabpanel" id="p-inv" aria-labelledby="t-inv" hidden>
+          <div class="pip-subtabs" role="tablist" aria-label="Inventory" data-pip-tabs id="inv-cats">
+            <button type="button" role="tab" aria-controls="inv-panel" data-cat="weapons" aria-selected="true">Weapons</button>
+            <button type="button" role="tab" aria-controls="inv-panel" data-cat="apparel">Apparel</button>
+            <button type="button" role="tab" aria-controls="inv-panel" data-cat="aid">Aid</button>
+            <button type="button" role="tab" aria-controls="inv-panel" data-cat="misc">Misc</button>
+            <button type="button" role="tab" aria-controls="inv-panel" data-cat="junk">Junk</button>
+            <button type="button" role="tab" aria-controls="inv-panel" data-cat="ammo">Ammo</button>
+          </div>
+          <div class="pip-screen__body">
+            <div class="pip-split kit-fill" role="tabpanel" id="inv-panel" aria-label="Items">
+              <ul class="pip-list" role="listbox" aria-label="Items in this category" data-pip-list id="inv-list"></ul>
+              <div class="kit-detail" id="inv-detail" aria-live="polite"></div>
+            </div>
+          </div>
+          <div class="pip-bar">
+            <div class="pip-bar__cell">Wg 142/235</div>
+            <div class="pip-bar__cell pip-bar__cell--grow">Caps 1,280</div>
+            <div class="pip-bar__cell">Dmg 48</div>
+            <div class="pip-bar__cell">DR 112</div>
+          </div>
+        </section>
+
+        <!-- DATA -->
+        <section class="pip-screen__panel" role="tabpanel" id="p-data" aria-labelledby="t-data" hidden>
+          <div class="pip-subtabs" role="tablist" aria-label="Data" data-pip-tabs>
+            <button type="button" role="tab" id="t-quests" aria-controls="p-quests" aria-selected="true">Quests</button>
+            <button type="button" role="tab" id="t-workshops" aria-controls="p-workshops">Workshops</button>
+            <button type="button" role="tab" id="t-stats" aria-controls="p-stats">Stats</button>
+          </div>
+          <div class="pip-screen__body">
+            <div class="pip-split kit-fill" role="tabpanel" id="p-quests" aria-labelledby="t-quests">
+              <ul class="pip-list" role="listbox" aria-label="Quests" data-pip-list id="quest-list"></ul>
+              <div class="kit-detail" id="quest-detail" aria-live="polite"></div>
+            </div>
+            <div role="tabpanel" id="p-workshops" aria-labelledby="t-workshops" hidden>
+              <div class="pip-table-wrap">
+                <table class="pip-table">
+                  <thead><tr><th scope="col">Settlement</th><th scope="col" class="num">People</th><th scope="col" class="num">Food</th><th scope="col" class="num">Water</th><th scope="col" class="num">Power</th><th scope="col" class="num">Defense</th><th scope="col" class="num">Happy</th></tr></thead>
+                  <tbody>
+                    <tr><td>Hollow Creek</td><td class="num">14</td><td class="num">12</td><td class="num">22</td><td class="num">40</td><td class="num">85</td><td class="num">72%</td></tr>
+                    <tr><td>Red Rock Quarry</td><td class="num">6</td><td class="num">9</td><td class="num">8</td><td class="num">10</td><td class="num">30</td><td class="num">64%</td></tr>
+                    <tr><td>Mill Pond</td><td class="num">4</td><td class="num">6</td><td class="num">10</td><td class="num">0</td><td class="num">12</td><td class="num">58%</td></tr>
+                    <tr><td>Vault 59 outer yard</td><td class="num">9</td><td class="num">11</td><td class="num">40</td><td class="num">60</td><td class="num">70</td><td class="num">81%</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div role="tabpanel" id="p-stats" aria-labelledby="t-stats" hidden>
+              <dl class="pip-readout pip-readout--cols">
+                <div><dt>Days passed</dt><dd>41</dd></div>
+                <div><dt>Locations discovered</dt><dd>87</dd></div>
+                <div><dt>Quests completed</dt><dd>23</dd></div>
+                <div><dt>Caps found</dt><dd>6,212</dd></div>
+                <div><dt>Stimpaks taken</dt><dd>64</dd></div>
+                <div><dt>Locks picked</dt><dd>31</dd></div>
+                <div><dt>Terminals hacked</dt><dd>19</dd></div>
+                <div><dt>Rads absorbed</dt><dd>4,180</dd></div>
+              </dl>
+            </div>
+          </div>
+          <div class="pip-bar">
+            <div class="pip-bar__cell" data-clock="date">10.04.2287</div>
+            <div class="pip-bar__cell" data-clock="time">12:00</div>
+            <div class="pip-bar__cell pip-bar__cell--grow">Hollow Creek</div>
+          </div>
+        </section>
+
+        <!-- MAP -->
+        <section class="pip-screen__panel" role="tabpanel" id="p-map" aria-labelledby="t-map" hidden>
+          <div class="pip-subtabs" role="tablist" aria-label="Map" data-pip-tabs>
+            <button type="button" role="tab" id="t-world" aria-controls="p-world" aria-selected="true">World map</button>
+            <button type="button" role="tab" id="t-local" aria-controls="p-local">Local map</button>
+          </div>
+          <div class="pip-screen__body">
+            <div class="pip-map" role="tabpanel" id="p-world" aria-labelledby="t-world" data-pip-map data-seed="2287">
+              <button type="button" class="pip-map__marker" style="--x:44%; --y:52%" data-note="Hollow Creek. Your settlement: 14 people.">
+                <span class="pip-sr">Hollow Creek</span></button>
+              <span class="pip-map__label" style="--x:44%; --y:52%" aria-hidden="true">Hollow Creek</span>
+              <button type="button" class="pip-map__marker" style="--x:71%; --y:30%" data-note="Vault 59. Residency office open dawn to dusk.">
+                <span class="pip-sr">Vault 59</span></button>
+              <span class="pip-map__label" style="--x:71%; --y:30%" aria-hidden="true">Vault 59</span>
+              <button type="button" class="pip-map__marker" data-kind="quest" style="--x:16%; --y:34%" data-note="Relay tower. Active quest: Static on the Long Wire.">
+                <span class="pip-sr">Relay tower, quest target</span></button>
+              <span class="pip-map__label" style="--x:16%; --y:34%" aria-hidden="true">Relay tower</span>
+              <button type="button" class="pip-map__marker" style="--x:30%; --y:78%" data-note="Red Rock Quarry. Allied settlement, supply line active.">
+                <span class="pip-sr">Red Rock Quarry</span></button>
+              <span class="pip-map__label" style="--x:30%; --y:78%" aria-hidden="true">Red Rock Quarry</span>
+              <button type="button" class="pip-map__marker" data-kind="unknown" style="--x:84%; --y:72%" data-note="Unknown signal. Not yet discovered.">
+                <span class="pip-sr">Undiscovered location</span></button>
+              <span class="pip-map__label" style="--x:84%; --y:72%" aria-hidden="true">Unknown signal</span>
+              <span class="pip-map__player" style="--x:47%; --y:56%; --r:-35deg" role="img" aria-label="You are here"></span>
+            </div>
+            <div class="pip-map" role="tabpanel" id="p-local" aria-labelledby="t-local" data-pip-map data-seed="59" hidden>
+              <button type="button" class="pip-map__marker" style="--x:30%; --y:40%" data-note="Water pump. Output 22 units a day.">
+                <span class="pip-sr">Water pump</span></button>
+              <span class="pip-map__label" style="--x:30%; --y:40%" aria-hidden="true">Water pump</span>
+              <button type="button" class="pip-map__marker" style="--x:58%; --y:62%" data-note="Trader stall. Open dawn to dusk, caps only.">
+                <span class="pip-sr">Trader stall</span></button>
+              <span class="pip-map__label" style="--x:58%; --y:62%" aria-hidden="true">Trader stall</span>
+              <button type="button" class="pip-map__marker" data-kind="quest" style="--x:52%; --y:12%" data-note="North gate. Raiders were sighted here this morning.">
+                <span class="pip-sr">North gate, quest target</span></button>
+              <span class="pip-map__label" style="--x:52%; --y:12%" aria-hidden="true">North gate</span>
+              <button type="button" class="pip-map__marker" style="--x:76%; --y:38%" data-note="Farm plots. 4 farmers on 12 plots.">
+                <span class="pip-sr">Farm plots</span></button>
+              <span class="pip-map__label" style="--x:76%; --y:38%" aria-hidden="true">Farm plots</span>
+              <span class="pip-map__player" style="--x:46%; --y:50%; --r:20deg" role="img" aria-label="You are here"></span>
+            </div>
+          </div>
+          <div class="pip-bar">
+            <div class="pip-bar__cell" data-clock="date">10.04.2287</div>
+            <div class="pip-bar__cell" data-clock="time">12:00</div>
+            <div class="pip-bar__cell pip-bar__cell--grow" id="map-note" aria-live="polite">Select a marker to read about it</div>
+          </div>
+        </section>
+
+        <!-- RADIO -->
+        <section class="pip-screen__panel" role="tabpanel" id="p-radio" aria-labelledby="t-radio" hidden>
+          <div class="pip-subtabs" role="tablist" aria-label="Radio">
+            <button type="button" role="tab" aria-selected="true" tabindex="0">Stations</button>
+          </div>
+          <div class="pip-screen__body">
+            <div class="pip-split">
+              <div class="kit-detail">
+                <ul class="pip-list" role="listbox" aria-label="Radio stations" data-pip-list id="station-list"></ul>
+                <p id="station-note" aria-live="polite"></p>
+              </div>
+              <div class="kit-radio__scope">
+                <div class="pip-scope" data-pip-scope id="scope" data-freq="3"></div>
+              </div>
+            </div>
+          </div>
+          <div class="pip-bar">
+            <div class="pip-bar__cell" id="station-freq">98.4 MHz</div>
+            <div class="pip-bar__cell pip-bar__cell--grow">
+              <label for="radio-volume">Vol</label>
+              <input class="pip-range kit-bar-range" type="range" id="radio-volume" min="0" max="10" value="7">
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="kit-boot" id="boot" hidden>
+        <div class="pip-terminal" id="boot-term"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="kit-hero__setup">
+    <div class="pip-stack" style="--stack-gap: var(--s-2)">
+      <h2 class="pip-h4">Add it to a page</h2>
+      <pre class="kit-snippet"><code>&lt;link rel="stylesheet" href="css/pipboy.css"&gt;
+&lt;script src="js/pipboy.js" defer&gt;&lt;/script&gt;
+&lt;body class="pip pip-page"&gt;</code></pre>
+    </div>
+    <fieldset class="pip-fieldset">
+      <legend class="pip-field__label">Screen effects</legend>
+      <label class="pip-check"><input type="checkbox" id="fx-scan" data-pip-fx="scan" checked><span class="pip-check__box"></span>Scanlines</label>
+      <label class="pip-check"><input type="checkbox" id="fx-roll" data-pip-fx="roll" checked><span class="pip-check__box"></span>Refresh band</label>
+      <label class="pip-check"><input type="checkbox" id="fx-glow" data-pip-fx="glow" checked><span class="pip-check__box"></span>Phosphor glow</label>
+      <label class="pip-check"><input type="checkbox" id="fx-flicker" data-pip-fx="flicker" checked><span class="pip-check__box"></span>Flicker</label>
+    </fieldset>
+    <div class="pip-row">
+      <button type="button" class="pip-btn" id="power-cycle"><kbd>P</kbd> Power cycle</button>
+    </div>
+    <p class="kit-keys">Use <kbd>&larr;</kbd><kbd>&rarr;</kbd> to switch tabs and <kbd>&uarr;</kbd><kbd>&darr;</kbd> to move through lists.</p>
+  </div>
+</section>
+
+<!-- DOCS ======================================================================== -->
+<div class="pip-container kit-docs" id="components">
+  <nav class="kit-index" aria-label="Components">
+    <div><h2>Foundations</h2><ul>
+      <li><a href="#tokens">Tubes and tokens</a></li>
+      <li><a href="#type">Type</a></li>
+      <li><a href="#effects">Screen effects</a></li>
+    </ul></div>
+    <div><h2>Controls</h2><ul>
+      <li><a href="#buttons">Buttons</a></li>
+      <li><a href="#fields">Text fields</a></li>
+      <li><a href="#choices">Choices</a></li>
+    </ul></div>
+    <div><h2>Navigation</h2><ul>
+      <li><a href="#tabs">Tabs and paging</a></li>
+    </ul></div>
+    <div><h2>Data</h2><ul>
+      <li><a href="#lists">Lists and readouts</a></li>
+      <li><a href="#meters">Meters</a></li>
+      <li><a href="#tables">Tables</a></li>
+      <li><a href="#tags">Tags and tooltips</a></li>
+      <li><a href="#panels">Panels</a></li>
+    </ul></div>
+    <div><h2>Feedback</h2><ul>
+      <li><a href="#feedback">Alerts and toasts</a></li>
+      <li><a href="#dialogs">Dialogs and loaders</a></li>
+    </ul></div>
+    <div><h2>HUD</h2><ul>
+      <li><a href="#hud">Compass, map, scope</a></li>
+      <li><a href="#terminal">Terminal</a></li>
+      <li><a href="#hacking">Password hacking</a></li>
+    </ul></div>
+    <div><h2>Use</h2><ul>
+      <li><a href="#examples">Example sites</a></li>
+    </ul></div>
+  </nav>
+
+  <div class="kit-sections">
+
+    <!-- Tokens -->
+    <section class="kit-section" id="tokens" aria-labelledby="h-tokens">
+      <h2 class="pip-panel__title" id="h-tokens">Tubes and tokens</h2>
+      <p class="kit-section__lede">Two tokens drive every color: <code>--phos</code>, the lit phosphor, and <code>--tube</code>, the unlit glass. The other shades are mixed from those two. Set <code>data-phosphor</code> on <code>&lt;html&gt;</code> to change the whole page, or on any element to give just that part its own tube.</p>
+      <div class="kit-tubes" id="tube-cards">
+        <button type="button" class="kit-tube" data-phosphor="p1" data-set-tube="p1" aria-pressed="false">
+          <span class="kit-tube__id">P1</span><span class="kit-tube__name">Green</span><span class="kit-tube__meta">525 nm, the Pip-Boy default</span></button>
+        <button type="button" class="kit-tube" data-phosphor="p3" data-set-tube="p3" aria-pressed="false">
+          <span class="kit-tube__id">P3</span><span class="kit-tube__name">Amber</span><span class="kit-tube__meta">602 nm, easy on the eyes at night</span></button>
+        <button type="button" class="kit-tube" data-phosphor="p4" data-set-tube="p4" aria-pressed="false">
+          <span class="kit-tube__id">P4</span><span class="kit-tube__name">White</span><span class="kit-tube__meta">Broadband, for daylight screens</span></button>
+        <button type="button" class="kit-tube" data-phosphor="p7" data-set-tube="p7" aria-pressed="false">
+          <span class="kit-tube__id">P7</span><span class="kit-tube__name">Blue</span><span class="kit-tube__meta">440 nm, for radar and vault systems</span></button>
+      </div>
+      <h3 class="pip-h4 kit-sub">Shades of the current tube</h3>
+      <div class="kit-swatches">
+        <div class="kit-swatch"><div class="kit-swatch__chip" style="--c: var(--phos-hi)"></div><code>--phos-hi</code><span>Headings and the brightest marks</span></div>
+        <div class="kit-swatch"><div class="kit-swatch__chip" style="--c: var(--phos)"></div><code>--phos</code><span>Body text and selected rows</span></div>
+        <div class="kit-swatch"><div class="kit-swatch__chip" style="--c: var(--phos-dim)"></div><code>--phos-dim</code><span>Secondary text, rules, idle controls</span></div>
+        <div class="kit-swatch"><div class="kit-swatch__chip" style="--c: var(--phos-low)"></div><code>--phos-low</code><span>Disabled text and meter tracks</span></div>
+        <div class="kit-swatch"><div class="kit-swatch__chip" style="--c: var(--phos-fill)"></div><code>--phos-fill</code><span>Readout cells and status bars</span></div>
+        <div class="kit-swatch"><div class="kit-swatch__chip" style="--c: var(--phos-wash)"></div><code>--phos-wash</code><span>Hover rows and focused inputs</span></div>
+        <div class="kit-swatch"><div class="kit-swatch__chip" style="--c: var(--tube)"></div><code>--tube</code><span>Unlit glass behind the content</span></div>
+        <div class="kit-swatch"><div class="kit-swatch__chip" style="--c: var(--hazard)"></div><code>--hazard</code><span>Damage, stolen goods, critical alerts</span></div>
+      </div>
+    </section>
+
+    <!-- Type -->
+    <section class="kit-section" id="type" aria-labelledby="h-type">
+      <h2 class="pip-panel__title" id="h-type">Type</h2>
+      <p class="kit-section__lede">VT323 is the terminal face and the display face. Roboto Condensed carries the interface, as it does on the real device. Sizes follow a classical scale from <code>--t-12</code> to <code>--t-72</code>.</p>
+      <div class="kit-type">
+        <div class="kit-type__row"><span class="kit-type__meta">Display, VT323 72</span><span class="pip-display" style="font-size: var(--t-72)">Please stand by</span></div>
+        <div class="kit-type__row"><span class="kit-type__meta">Heading 1, VT323 48</span><span class="pip-h1" style="font-size: var(--t-48)">Vault 59 is open</span></div>
+        <div class="kit-type__row"><span class="kit-type__meta">Heading 2, bold 24</span><span class="pip-h2">Inventory</span></div>
+        <div class="kit-type__row"><span class="kit-type__meta">Heading 3, bold 18</span><span class="pip-h3">Water purifier</span></div>
+        <div class="kit-type__row"><span class="kit-type__meta">Body, 18</span><p>Each settler needs one unit of food and one of water a day. When supply runs short, happiness drops by five points a day.</p></div>
+        <div class="kit-type__row"><span class="kit-type__meta">Small, 14</span><p class="pip-dim" style="font-size: var(--t-14)">Weight 4.2, value 53 caps. Takes 10mm rounds.</p></div>
+        <div class="kit-type__row"><span class="kit-type__meta">Terminal, VT323 24</span><p class="pip-term" style="font-size: var(--t-24)">&gt;Entry denied. Likeness=3</p></div>
+      </div>
+    </section>
+
+    <!-- Effects -->
+    <section class="kit-section" id="effects" aria-labelledby="h-effects">
+      <h2 class="pip-panel__title" id="h-effects">Screen effects</h2>
+      <p class="kit-section__lede"><code>.pip-crt</code> turns any box into a tube: curved-glass shading, vignette, scanlines and a slow refresh band. <code>.pip-page</code> lays scanlines over the whole page. <code>.pip-scanlines</code> is the mask technique from the Codemotion article: it darkens only lit pixels. Every effect stops under reduced motion and can be switched off with <code>Pip.setFx()</code>.</p>
+      <div class="kit-demo kit-demo--grid">
+        <div class="pip-crt" id="fx-screen">
+          <div class="pip-terminal">
+            <p>PIP-OS V7.1.0.8</p>
+            <p>64K RAM SYSTEM</p>
+            <p>&gt;<span class="pip-cursor"></span></p>
+          </div>
+        </div>
+        <div class="pip-stack">
+          <p class="pip-display pip-scanlines" style="font-size: var(--t-60)">Rads</p>
+          <p class="pip-h3 pip-blink">Low health</p>
+          <p class="pip-h3 pip-flicker">Signal weak</p>
+        </div>
+      </div>
+      <div class="pip-row">
+        <button type="button" class="pip-btn pip-btn--small" id="fx-replay">Replay power on</button>
+      </div>
+    </section>
+
+    <!-- Buttons -->
+    <section class="kit-section" id="buttons" aria-labelledby="h-buttons">
+      <h2 class="pip-panel__title" id="h-buttons">Buttons</h2>
+      <p class="kit-section__lede">Buttons invert when hovered or focused. Put a <code>&lt;kbd&gt;</code> inside to show the keyboard shortcut. Use the danger style only for actions that lose something.</p>
+      <div class="kit-demo">
+        <button type="button" class="pip-btn pip-btn--primary"><kbd>E</kbd> Equip</button>
+        <button type="button" class="pip-btn"><kbd>R</kbd> Inspect</button>
+        <button type="button" class="pip-btn pip-btn--ghost">Cancel</button>
+        <button type="button" class="pip-btn pip-btn--danger"><kbd>X</kbd> Drop</button>
+        <button type="button" class="pip-btn" disabled>Repair</button>
+        <button type="button" class="pip-btn pip-btn--small">Sort by weight</button>
+      </div>
+      <h3 class="pip-h4 kit-sub">Hold to confirm</h3>
+      <p class="kit-section__lede">For actions that can't be undone, ask for a hold instead of a dialog. The fill grows while the button is held, and letting go early cancels. Listen for <code>pip:confirm</code>.</p>
+      <div class="kit-demo">
+        <button type="button" class="pip-btn pip-btn--hold" data-pip-hold="1200" id="demo-scrap">Hold to scrap desk fan</button>
+      </div>
+    </section>
+
+    <!-- Fields -->
+    <section class="kit-section" id="fields" aria-labelledby="h-fields">
+      <h2 class="pip-panel__title" id="h-fields">Text fields</h2>
+      <p class="kit-section__lede">Inputs read like a terminal prompt: VT323, an underline and a block caret. Wrap an input in <code>.pip-prompt</code> to add the leading mark. Mark errors with <code>aria-invalid</code> and say how to fix them.</p>
+      <div class="kit-demo">
+        <div class="pip-field">
+          <label class="pip-field__label" for="f-name">Settler name</label>
+          <span class="pip-prompt"><input class="pip-input" id="f-name" placeholder="Type a name" autocomplete="off" spellcheck="false"></span>
+          <span class="pip-field__help">2 to 24 characters.</span>
+        </div>
+        <div class="pip-field">
+          <label class="pip-field__label" for="f-code">Door code</label>
+          <span class="pip-prompt"><input class="pip-input" id="f-code" value="59-0A" aria-invalid="true" aria-describedby="f-code-error" autocomplete="off"></span>
+          <span class="pip-field__error" id="f-code-error">Use four digits, like 5904.</span>
+        </div>
+        <div class="pip-field">
+          <label class="pip-field__label" for="f-dest">Destination</label>
+          <span class="pip-select"><select id="f-dest">
+            <option>Hollow Creek</option>
+            <option>Vault 59</option>
+            <option>Red Rock Quarry</option>
+            <option>Mill Pond</option>
+          </select></span>
+        </div>
+        <div class="pip-field">
+          <label class="pip-field__label" for="f-note">Holotape note</label>
+          <textarea class="pip-textarea" id="f-note" placeholder="Record a message for the next visitor"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- Choices -->
+    <section class="kit-section" id="choices" aria-labelledby="h-choices">
+      <h2 class="pip-panel__title" id="h-choices">Choices</h2>
+      <p class="kit-section__lede">Checkboxes and radios keep the native input for keyboard and screen readers and draw a lit square or dot. The switch, segmented control and stepper are buttons with ARIA state that <code>pipboy.js</code> keeps in sync.</p>
+      <div class="kit-demo">
+        <fieldset class="pip-fieldset">
+          <legend class="pip-field__label">Show on map</legend>
+          <label class="pip-check"><input type="checkbox" id="c-settle" checked><span class="pip-check__box"></span>Settlements</label>
+          <label class="pip-check"><input type="checkbox" id="c-vault" checked><span class="pip-check__box"></span>Vaults</label>
+          <label class="pip-check"><input type="checkbox" id="c-unknown"><span class="pip-check__box"></span>Undiscovered places</label>
+          <label class="pip-check"><input type="checkbox" id="c-fast" disabled><span class="pip-check__box"></span>Fast travel routes</label>
+        </fieldset>
+        <fieldset class="pip-fieldset">
+          <legend class="pip-field__label">Difficulty</legend>
+          <label class="pip-radio"><input type="radio" name="difficulty" id="r-easy"><span class="pip-radio__box"></span>Easy</label>
+          <label class="pip-radio"><input type="radio" name="difficulty" id="r-normal" checked><span class="pip-radio__box"></span>Normal</label>
+          <label class="pip-radio"><input type="radio" name="difficulty" id="r-survival"><span class="pip-radio__box"></span>Survival</label>
+        </fieldset>
+        <div class="pip-stack" style="--stack-gap: var(--s-4)">
+          <div class="pip-field">
+            <span class="pip-field__label" id="l-light">Pip-Boy light</span>
+            <button type="button" class="pip-toggle" role="switch" aria-checked="true" aria-labelledby="l-light"><span>On</span><span>Off</span></button>
+          </div>
+          <div class="pip-field">
+            <span class="pip-field__label" id="l-view">Map view</span>
+            <div class="pip-segmented" role="radiogroup" aria-labelledby="l-view">
+              <button type="button" role="radio" value="world" aria-checked="true">World</button>
+              <button type="button" role="radio" value="local">Local</button>
+            </div>
+          </div>
+          <div class="pip-field">
+            <span class="pip-field__label" id="l-str">Strength</span>
+            <div class="pip-stepper" data-pip-stepper data-min="1" data-max="10" data-value="5" role="group" aria-labelledby="l-str">
+              <button type="button" class="pip-arrow" aria-label="Lower Strength"></button>
+              <output aria-live="polite">5</output>
+              <button type="button" class="pip-arrow pip-arrow--next" aria-label="Raise Strength"></button>
+            </div>
+          </div>
+        </div>
+        <div class="pip-field">
+          <label class="pip-field__label" for="vol">Radio volume</label>
+          <input class="pip-range" type="range" id="vol" min="0" max="10" value="7">
+        </div>
+      </div>
+    </section>
+
+    <!-- Tabs -->
+    <section class="kit-section" id="tabs" aria-labelledby="h-tabs">
+      <h2 class="pip-panel__title" id="h-tabs">Tabs and paging</h2>
+      <p class="kit-section__lede">Main tabs sit on a rule that notches up around the active one. Sub tabs fade with distance from the active tab. Both use <code>role="tablist"</code> with <code>data-pip-tabs</code>, and the arrow keys move between tabs.</p>
+      <div class="kit-demo kit-demo--stack">
+        <div class="pip-tabs" role="tablist" aria-label="Demo" data-pip-tabs>
+          <button type="button" role="tab" id="dt-1" aria-controls="dp-1" aria-selected="true">Stat</button>
+          <button type="button" role="tab" id="dt-2" aria-controls="dp-2">Inv</button>
+          <button type="button" role="tab" id="dt-3" aria-controls="dp-3">Data</button>
+        </div>
+        <div class="pip-subtabs" role="tablist" aria-label="Inventory categories" data-pip-tabs>
+          <button type="button" role="tab" aria-selected="true">Weapons</button>
+          <button type="button" role="tab">Apparel</button>
+          <button type="button" role="tab">Aid</button>
+          <button type="button" role="tab">Misc</button>
+          <button type="button" role="tab">Junk</button>
+          <button type="button" role="tab">Ammo</button>
+        </div>
+        <div role="tabpanel" id="dp-1" aria-labelledby="dt-1"><p>Health, limb condition and S.P.E.C.I.A.L. attributes.</p></div>
+        <div role="tabpanel" id="dp-2" aria-labelledby="dt-2" hidden><p>Everything you carry, sorted by category.</p></div>
+        <div role="tabpanel" id="dp-3" aria-labelledby="dt-3" hidden><p>Quests, settlements and lifetime statistics.</p></div>
+        <div class="pip-pager" data-pip-pager data-page="2" data-pages="6">
+          <button type="button" class="pip-arrow" aria-label="Previous page"></button>
+          <span class="pip-pager__label">Page 2 of 6</span>
+          <button type="button" class="pip-arrow pip-arrow--next" aria-label="Next page"></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Lists -->
+    <section class="kit-section" id="lists" aria-labelledby="h-lists">
+      <h2 class="pip-panel__title" id="h-lists">Lists and readouts</h2>
+      <p class="kit-section__lede">The core Pip-Boy layout: a list on the left, the selected item's numbers on the right. The selected row inverts. Add <code>data-equipped</code> to light the square in front of an item. Readout rows sit on filled cells with a thin seam between them.</p>
+      <div class="kit-demo">
+        <div class="pip-split">
+          <ul class="pip-list" role="listbox" aria-label="Apparel" data-pip-list id="demo-list">
+            <li role="option" aria-selected="true" data-equipped data-slot="body" data-dr="12" data-wg="5" data-val="18"><span class="pip-list__mark"></span>Road Leathers</li>
+            <li role="option" data-slot="body" data-dr="18" data-wg="5" data-val="40"><span class="pip-list__mark"></span>Leather Chest Piece <span class="pip-list__qty">(2)</span></li>
+            <li role="option" data-equipped data-slot="head" data-dr="1" data-wg="1" data-val="8"><span class="pip-list__mark"></span>Patrol Cap</li>
+            <li role="option" data-slot="head" data-dr="3" data-wg="2" data-val="25"><span class="pip-list__mark"></span>Gas Mask</li>
+            <li role="option" data-slot="body" data-dr="5" data-wg="1" data-val="20"><span class="pip-list__mark"></span>Vault 59 Jumpsuit</li>
+          </ul>
+          <dl class="pip-readout" id="demo-readout" aria-live="polite">
+            <div><dt>Damage resist</dt><dd>12</dd></div>
+            <div><dt>Weight</dt><dd>5</dd></div>
+            <div><dt>Value</dt><dd>18</dd></div>
+          </dl>
+        </div>
+      </div>
+    </section>
+
+    <!-- Meters -->
+    <section class="kit-section" id="meters" aria-labelledby="h-meters">
+      <h2 class="pip-panel__title" id="h-meters">Meters</h2>
+      <p class="kit-section__lede">Give a meter <code>role="meter"</code> and its <code>aria-value</code> attributes, and the fill follows. Add <code>data-rads</code> to hatch absorbed radiation in from the right, as on the real health bar. <code>--seg</code> splits the fill into cells; <code>--low</code> blinks it.</p>
+      <div class="kit-demo kit-demo--stack">
+        <div class="pip-meter" role="meter" aria-label="Health, 30 rads absorbed" aria-valuenow="182" aria-valuemin="0" aria-valuemax="230" data-rads="30">
+          <span class="pip-meter__label">HP</span>
+          <span class="pip-meter__track"><span class="pip-meter__fill"></span><span class="pip-meter__rads"></span></span>
+          <span class="pip-meter__value">182/230</span>
+        </div>
+        <div class="pip-meter pip-meter--seg" role="meter" aria-label="Action points" aria-valuenow="64" aria-valuemin="0" aria-valuemax="90">
+          <span class="pip-meter__label">AP</span>
+          <span class="pip-meter__track"><span class="pip-meter__fill"></span></span>
+          <span class="pip-meter__value">64/90</span>
+        </div>
+        <div class="pip-meter pip-meter--low" role="meter" aria-label="Fusion core charge" aria-valuenow="12" aria-valuemin="0" aria-valuemax="100">
+          <span class="pip-meter__label">Core</span>
+          <span class="pip-meter__track"><span class="pip-meter__fill"></span></span>
+          <span class="pip-meter__value">12%</span>
+        </div>
+        <div class="pip-bar">
+          <div class="pip-bar__cell">HP 182/230</div>
+          <div class="pip-bar__cell pip-bar__cell--grow">Level 21
+            <div class="pip-meter pip-meter--bare" role="meter" aria-label="Experience toward level 22" aria-valuenow="3120" aria-valuemin="0" aria-valuemax="4400"><span class="pip-meter__track"><span class="pip-meter__fill"></span></span></div>
+          </div>
+          <div class="pip-bar__cell">AP 64/90</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tables -->
+    <section class="kit-section" id="tables" aria-labelledby="h-tables">
+      <h2 class="pip-panel__title" id="h-tables">Tables</h2>
+      <p class="kit-section__lede">Numbers use tabular figures and right-align with <code>.num</code>. Wrap the table in <code>.pip-table-wrap</code> so it scrolls sideways on its own instead of widening the page.</p>
+      <div class="kit-demo">
+        <div class="pip-table-wrap">
+          <table class="pip-table">
+            <caption class="pip-h4">Caravan schedule, week 6</caption>
+            <thead><tr><th scope="col">Route</th><th scope="col">Leader</th><th scope="col" class="num">Days</th><th scope="col" class="num">Guards</th><th scope="col">Cargo</th></tr></thead>
+            <tbody>
+              <tr><td>Hollow Creek to Red Rock Quarry</td><td>Marta Iles</td><td class="num">2</td><td class="num">3</td><td>Purified water, fertilizer</td></tr>
+              <tr><td>Red Rock Quarry to Mill Pond</td><td>Joss Varga</td><td class="num">1</td><td class="num">2</td><td>Concrete, steel</td></tr>
+              <tr><td>Mill Pond to Vault 59</td><td>Dee Okonkwo</td><td class="num">3</td><td class="num">4</td><td>Corn, gourds</td></tr>
+              <tr><td>Vault 59 to Hollow Creek</td><td>Arlo Penn</td><td class="num">2</td><td class="num">2</td><td>Stimpaks, circuit boards</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tags -->
+    <section class="kit-section" id="tags" aria-labelledby="h-tags">
+      <h2 class="pip-panel__title" id="h-tags">Tags and tooltips</h2>
+      <p class="kit-section__lede">Tags mark an item's state. The screen is one color, so state shows as form: filled, outlined, or hazard red for things that hurt. Add <code>data-pip-tip</code> to any element without its own <code>::after</code> for a short tooltip.</p>
+      <div class="kit-demo">
+        <span class="pip-tag">New</span>
+        <span class="pip-tag pip-tag--outline">Quest item</span>
+        <span class="pip-tag pip-tag--outline">Legendary</span>
+        <span class="pip-tag pip-tag--hazard">Stolen</span>
+        <button type="button" class="pip-btn pip-btn--small" data-pip-tip="Removes 300 rads">Use RadAway</button>
+      </div>
+    </section>
+
+    <!-- Panels -->
+    <section class="kit-section" id="panels" aria-labelledby="h-panels">
+      <h2 class="pip-panel__title" id="h-panels">Panels</h2>
+      <p class="kit-section__lede">A panel puts its title into the top rule, and the side rules fade out downward like the HUD brackets. Add <code>--closed</code> for a full frame. Disclosures hold secondary detail, and an empty state says what will appear and how to get it.</p>
+      <div class="kit-demo">
+        <section class="pip-panel" aria-labelledby="pn-1">
+          <h3 class="pip-panel__title" id="pn-1">Holotape: pump house survey</h3>
+          <p>Intake valve is half closed with silt. Pressure at the settlement tap is down to 31 psi from 60. Bring two steel and a gear to fix it.</p>
+        </section>
+        <section class="pip-panel pip-panel--closed" aria-labelledby="pn-2">
+          <h3 class="pip-panel__title" id="pn-2">Ration notice</h3>
+          <p>Water ration is two litres a person until the pump is repaired.</p>
+        </section>
+        <details class="pip-disclosure">
+          <summary>How do I repair the intake valve?</summary>
+          <div class="pip-disclosure__body"><p>Open the maintenance hatch from the pump house terminal, then use the workbench inside with two steel and one gear in your inventory.</p></div>
+        </details>
+        <details class="pip-disclosure">
+          <summary>Who maintains the pump?</summary>
+          <div class="pip-disclosure__body"><p>Kessler, on the day shift. Find the night-shift log on the pump house terminal.</p></div>
+        </details>
+        <div class="pip-empty">
+          <p class="pip-h3">No holotapes</p>
+          <p>Pick one up and it will play from here.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Alerts and toasts -->
+    <section class="kit-section" id="feedback" aria-labelledby="h-feedback">
+      <h2 class="pip-panel__title" id="h-feedback">Alerts and toasts</h2>
+      <p class="kit-section__lede">Alerts stay on the page until the problem is gone. The critical alert pulses its glow on a slow beat, following the Codemotion blink. Toasts confirm something that just happened and leave after four seconds.</p>
+      <div class="kit-demo kit-demo--stack">
+        <div class="pip-alert" role="status">
+          <span class="pip-alert__icon" aria-hidden="true">!</span>
+          <p class="pip-alert__title">Quest updated</p>
+          <p class="pip-alert__body">Static on the Long Wire: reach the top of the relay tower.</p>
+        </div>
+        <div class="pip-alert pip-alert--caution" role="status">
+          <span class="pip-alert__icon" aria-hidden="true">!</span>
+          <p class="pip-alert__title">Over-encumbered</p>
+          <p class="pip-alert__body">You're carrying 251 of 235 lb. You can't run until you drop 16 lb.</p>
+        </div>
+        <div class="pip-alert pip-alert--critical" role="alert">
+          <span class="pip-alert__icon" aria-hidden="true">!</span>
+          <p class="pip-alert__title">Radiation critical</p>
+          <p class="pip-alert__body">920 rads absorbed. Take RadAway now; at 1000 your maximum health is gone.</p>
+        </div>
+      </div>
+      <div class="kit-demo">
+        <button type="button" class="pip-btn" data-toast="quest">Show quest toast</button>
+        <button type="button" class="pip-btn" data-toast="xp">Show XP toast</button>
+        <button type="button" class="pip-btn" data-toast="item">Show item toast</button>
+      </div>
+      <script type="text/plain" class="kit-src" data-lang="js">Pip.toast({ title: "Quest added", body: "The Dry Reservoir", icon: "!" });
+Pip.toast({ title: "Experience", body: "+25 XP: Locked terminal", icon: "+" });
+Pip.toast({ title: "Item added", body: "Stimpak (3)", icon: "S" });</script>
+    </section>
+
+    <!-- Dialogs and loaders -->
+    <section class="kit-section" id="dialogs" aria-labelledby="h-dialogs">
+      <h2 class="pip-panel__title" id="h-dialogs">Dialogs and loaders</h2>
+      <p class="kit-section__lede"><code>Pip.confirm()</code> opens a native <code>&lt;dialog&gt;</code> and resolves to true or false. Focus starts on the safe choice. The loader sweeps three lit cells across ten while you wait.</p>
+      <div class="kit-demo">
+        <button type="button" class="pip-btn pip-btn--danger" id="demo-confirm"><kbd>X</kbd> Drop fusion core</button>
+        <p id="demo-confirm-result" aria-live="polite" class="pip-dim">Fusion core: equipped</p>
+      </div>
+      <script type="text/plain" class="kit-src" data-lang="js">const drop = await Pip.confirm({
+  title: "Drop the fusion core?",
+  body: "Your power armor can't move without it.",
+  confirmLabel: "Drop it",
+  cancelLabel: "Keep it",
+  danger: true,
+});
+if (drop) Pip.toast({ title: "Item removed", body: "Fusion core" });</script>
+      <div class="kit-demo">
+        <div class="pip-loader" role="status">
+          <span>Please stand by</span>
+          <span class="pip-loader__bar"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- HUD -->
+    <section class="kit-section" id="hud" aria-labelledby="h-hud">
+      <h2 class="pip-panel__title" id="h-hud">Compass, map, scope</h2>
+      <p class="kit-section__lede">The compass strip takes markers by bearing in <code>data-markers</code>; turn it with <code>Pip.compass(el).set(degrees)</code>. The map draws seeded contour lines on a canvas under real buttons for each marker. The scope draws the radio waveform. All three redraw when the tube changes.</p>
+      <div class="kit-demo kit-demo--stack">
+        <div class="pip-compass" data-pip-compass id="demo-compass" data-heading="20"
+             data-markers='[{"bearing": 35, "kind": "quest"}, {"bearing": 300, "kind": "place"}, {"bearing": 80, "kind": "hostile"}]'></div>
+        <div class="pip-field">
+          <label class="pip-field__label" for="heading">Heading</label>
+          <input class="pip-range" type="range" id="heading" min="0" max="359" value="20">
+        </div>
+      </div>
+      <div class="kit-demo">
+        <div class="pip-map" data-pip-map data-seed="406">
+          <button type="button" class="pip-map__marker" style="--x:28%; --y:40%"><span class="pip-sr">Mill Pond</span></button>
+          <span class="pip-map__label" style="--x:28%; --y:40%" aria-hidden="true">Mill Pond</span>
+          <button type="button" class="pip-map__marker" data-kind="quest" style="--x:62%; --y:24%"><span class="pip-sr">Pump house, quest target</span></button>
+          <span class="pip-map__label" style="--x:62%; --y:24%" aria-hidden="true">Pump house</span>
+          <button type="button" class="pip-map__marker" data-kind="unknown" style="--x:78%; --y:70%"><span class="pip-sr">Undiscovered location</span></button>
+          <span class="pip-map__label" style="--x:78%; --y:70%" aria-hidden="true">Undiscovered</span>
+          <span class="pip-map__player" style="--x:46%; --y:55%; --r:30deg" role="img" aria-label="You are here"></span>
+        </div>
+      </div>
+      <div class="kit-demo">
+        <div class="pip-scope" data-pip-scope data-freq="4" id="demo-scope" style="width: 12rem"></div>
+        <div class="pip-field">
+          <label class="pip-field__label" for="scope-freq">Frequency</label>
+          <input class="pip-range" type="range" id="scope-freq" min="1" max="12" value="4">
+        </div>
+      </div>
+    </section>
+
+    <!-- Terminal -->
+    <section class="kit-section" id="terminal" aria-labelledby="h-terminal">
+      <h2 class="pip-panel__title" id="h-terminal">Terminal</h2>
+      <p class="kit-section__lede">A terminal is VT323 on a <code>.pip-crt</code>. Lines marked <code>.pip-terminal__line</code> type themselves out when you call <code>Pip.type(el)</code>, or on load with <code>data-pip-type</code>; a click or key press skips to the end. Menu entries are buttons. Try typing <kbd>help</kbd> at the prompt.</p>
+      <div class="kit-demo">
+        <div class="pip-crt">
+          <div class="pip-terminal" id="demo-terminal" data-pip-cps="80">
+            <div class="pip-terminal__head">
+              <p class="pip-terminal__line">HOLLOW CREEK WATER AUTHORITY</p>
+              <p class="pip-terminal__line">PUMP HOUSE TERMINAL 2</p>
+            </div>
+            <p class="pip-terminal__line">Welcome, Kessler.</p>
+            <ul class="pip-terminal__menu">
+              <li><button type="button" data-entry="pressure">Read log: pressure readings</button></li>
+              <li><button type="button" data-entry="valve">Read log: intake valve</button></li>
+              <li><button type="button" data-entry="hatch">Open maintenance hatch</button></li>
+            </ul>
+            <div class="pip-terminal__out" aria-live="polite"></div>
+            <label class="pip-terminal__prompt"><span class="pip-sr">Command</span><input id="term-input" autocomplete="off" spellcheck="false"></label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Hacking -->
+    <section class="kit-section" id="hacking" aria-labelledby="h-hacking">
+      <h2 class="pip-panel__title" id="h-hacking">Password hacking</h2>
+      <p class="kit-section__lede">Pick a word from the memory dump. A wrong guess tells you its likeness: how many letters sit in the same position as in the password. You get four attempts. The game builds itself inside any element with <code>data-pip-hack</code>, and fires <code>pip:unlocked</code> or <code>pip:locked</code>.</p>
+      <div class="kit-demo">
+        <div class="pip-crt">
+          <div class="pip-terminal">
+            <div class="pip-hack" data-pip-hack data-length="7" id="demo-hack"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Examples -->
+    <section class="kit-section" id="examples" aria-labelledby="h-examples">
+      <h2 class="pip-panel__title" id="h-examples">Example sites</h2>
+      <p class="kit-section__lede">Three pages built only from the kit, one each for marketing, commerce and operations. Open one and switch tubes from its header.</p>
+      <div class="kit-examples">
+        <a class="kit-example" href="examples/vault-59.html">
+<pre aria-hidden="true">+--------------------------+
+| VAULT 59 IS OPEN_        |
+| [#######...] 38 left     |
++--------+--------+--------+
+| WATER  | POWER  | SAFETY |
++--------+--------+--------+
+| S P E C I A L   21 pts   |
+| &gt; APPLY                  |
++--------------------------+</pre>
+          <h3 class="pip-h3">Vault 59 Residency</h3>
+          <p>A landing page that recruits residents: a display-type hero, facility readouts, a floor plan, a S.P.E.C.I.A.L. point budget and a validated application form.</p>
+          <span class="kit-example__go">Open the landing page</span>
+        </a>
+        <a class="kit-example" href="examples/trading-post.html">
+<pre aria-hidden="true">+--------------------------+
+| WPN  APP  AID  JNK  AMO  |
++---------+--------+-------+
+|[10mm   ]| DMG 18 | BARTER|
+| Rifle   | WG 4.2 | 2 item|
+| Knife   | VAL 53 | 212 c |
++---------+--------+-------+
+| CAPS 1280   WG 142/235   |
++--------------------------+</pre>
+          <h3 class="pip-h3">Hollow Creek Trading Post</h3>
+          <p>A barter shop: category tabs, item readouts, a cart priced by your Charisma, a carry-weight meter and hold-to-trade checkout.</p>
+          <span class="kit-example__go">Open the shop</span>
+        </a>
+        <a class="kit-example" href="examples/settlement.html">
+<pre aria-hidden="true">+--------------------------+
+| PPL 14 FOOD 12 H2O 22 .. |
+| ! RAIDERS AT NORTH GATE  |
++-------------+------------+
+|   _/\_/\    | ====  food |
+|  happiness  | ===== water|
++-------------+------------+
+| settler    job    status |
++--------------------------+</pre>
+          <h3 class="pip-h3">Hollow Creek Overseer</h3>
+          <p>A settlement dashboard: summary stats, a happiness trend, production against need, job assignments, a lookout compass and a radio log.</p>
+          <span class="kit-example__go">Open the dashboard</span>
+        </a>
+      </div>
+    </section>
+
+  </div>
+</div>
+</main>
+
+<footer class="pip-container kit-foot">
+  <p>Pip-OS Interface Kit 1.0. A fan-made design kit; Fallout and Pip-Boy belong to their owners.</p>
+  <p>Scanline mask and alarm techniques adapted from <a href="https://www.codemotion.com/magazine/frontend/creating-a-fallout-style-ui-using-modern-css/">Creating a Fallout-style UI using modern CSS</a> on Codemotion.</p>
+</footer>
+
+<script>
+  // Capture each demo's markup before pipboy.js changes the DOM, and show it below the demo.
+  (() => {
+    const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const dedent = (src) => {
+      const lines = src.replace(/\t/g, "  ").split("\n");
+      while (lines.length && !lines[0].trim()) lines.shift();
+      while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+      const indent = Math.min(...lines.filter((l) => l.trim()).map((l) => l.match(/^ */)[0].length));
+      return lines.map((l) => l.slice(indent)).join("\n");
+    };
+    const highlight = (code) => esc(code)
+      .replace(/(&lt;\/?)([a-z][\w-]*)/g, '$1<span class="tok-tag">$2</span>')
+      .replace(/ ([a-z][\w:-]*)=/g, ' <span class="tok-attr">$1</span>=');
+
+    document.querySelectorAll(".kit-demo").forEach((demo) => {
+      const next = demo.nextElementSibling;
+      const isSrc = next && next.classList.contains("kit-src");
+      const raw = isSrc ? next.textContent : demo.innerHTML.replace(/=""/g, "");
+      const code = dedent(raw);
+      const details = document.createElement("details");
+      details.className = "kit-code";
+      details.innerHTML = `<summary>${isSrc ? "Script" : "Markup"}</summary>
+        <div class="kit-code__body"><button type="button" class="pip-btn pip-btn--small kit-copy">Copy</button><pre><code></code></pre></div>`;
+      details.querySelector("code").innerHTML = isSrc ? esc(code) : highlight(code);
+      details.querySelector(".kit-copy").dataset.code = code;
+      (isSrc ? next : demo).after(details);
+    });
+  })();
+</script>
+<script src="js/pipboy.js"></script>
+<script>
+(() => {
+  /* Hero data ------------------------------------------------------------- */
+  const SPECIAL = [
+    ["Strength", 6, "Raw physical power. Raises how much you can carry and how hard melee weapons hit."],
+    ["Perception", 5, "Awareness of your surroundings. Improves accuracy when aiming and warns you of danger sooner."],
+    ["Endurance", 4, "Stamina and toughness. Adds health and lets you sprint for longer."],
+    ["Charisma", 7, "Presence and charm. Lowers prices when you barter and opens new answers in conversation."],
+    ["Intelligence", 6, "Knowledge and reasoning. Earns more experience from everything you do and helps at terminals."],
+    ["Agility", 5, "Speed and coordination. Adds action points and makes sneaking quieter."],
+    ["Luck", 3, "Good fortune. Finds more caps in containers and fills the critical meter faster."],
+  ];
+  const PERKS = [
+    ["Steady Hands", 2, 3, "Pistols sway less while you aim. Rank 3 removes the sway entirely."],
+    ["Quartermaster", 1, 2, "Traders in your settlements stock more ammunition and aid."],
+    ["Scrounger", 1, 4, "You find extra ammunition in containers."],
+    ["Iron Stomach", 1, 3, "Irradiated food and water give you half the usual rads."],
+    ["Night Owl", 1, 2, "Between 6 p.m. and 6 a.m. your Intelligence and Perception rise by 2."],
+  ];
+  const INV = {
+    weapons: [
+      { name: "10mm Pistol", equipped: true, stats: [["Damage", 18], ["Fire rate", 46], ["Range", 83], ["Accuracy", 61], ["Weight", 4.2], ["Value", 53]], note: "Reliable sidearm. Takes 10mm rounds; you carry 64." },
+      { name: "Hunting Rifle", stats: [["Damage", 38], ["Fire rate", 4], ["Range", 126], ["Accuracy", 70], ["Weight", 11], ["Value", 97]], note: "Bolt action. Slow to cycle, hits hard at range." },
+      { name: "Pipe Revolver", stats: [["Damage", 29], ["Fire rate", 10], ["Range", 75], ["Accuracy", 55], ["Weight", 4], ["Value", 43]], note: "Built from plumbing scrap. Loud, cheap and more accurate than it looks." },
+      { name: "Combat Knife", stats: [["Damage", 12], ["Speed", "Fast"], ["Weight", 1], ["Value", 25]], note: "Quiet. Sneak attacks deal double damage." },
+      { name: "Laser Pistol", stats: [["Damage", 20], ["Fire rate", 40], ["Range", 100], ["Accuracy", 68], ["Weight", 3.5], ["Value", 69]], note: "Fires fusion cells. Partly ignores armor." },
+      { name: "Frag Grenade", qty: 4, stats: [["Damage", 100], ["Range", "Thrown"], ["Weight", .5], ["Value", 50]], note: "Four-second fuse. Hold it a moment before you throw." },
+    ],
+    apparel: [
+      { name: "Road Leathers", equipped: true, stats: [["Damage resist", 12], ["Energy resist", 8], ["Weight", 5], ["Value", 18]], note: "Worn leather over a cotton shirt. Covers the body only." },
+      { name: "Patrol Cap", equipped: true, stats: [["Damage resist", 1], ["Weight", 1], ["Value", 8]], note: "Keeps the sun out of your eyes." },
+      { name: "Gas Mask", stats: [["Damage resist", 3], ["Rad resist", 10], ["Weight", 2], ["Value", 25]], note: "Filters airborne radiation. Fogs up in the rain." },
+      { name: "Leather Chest Piece", qty: 2, stats: [["Damage resist", 18], ["Energy resist", 12], ["Weight", 5], ["Value", 40]], note: "Worn over clothing for extra protection." },
+      { name: "Vault 59 Jumpsuit", stats: [["Damage resist", 5], ["Rad resist", 5], ["Weight", 1], ["Value", 20]], note: "Standard issue. The number is stitched on the back." },
+    ],
+    aid: [
+      { name: "Stimpak", qty: 6, stats: [["Health", "+40%"], ["Weight", .1], ["Value", 50]], note: "Heals over a few seconds and mends crippled limbs." },
+      { name: "RadAway", qty: 2, stats: [["Rads", "-300"], ["Weight", .1], ["Value", 80]], note: "Flushes radiation over several seconds. Leaves you hungry." },
+      { name: "Rad-X", qty: 3, stats: [["Rad resist", "+100"], ["Duration", "4 min"], ["Weight", .1], ["Value", 40]], note: "Take before entering a hot zone, not after." },
+      { name: "Purified Water", qty: 5, stats: [["Health", "+20"], ["Rads", 0], ["Weight", .5], ["Value", 20]], note: "From the Hollow Creek pump. Safe to drink." },
+      { name: "Cram", qty: 4, stats: [["Health", "+50"], ["Rads", "+5"], ["Weight", .5], ["Value", 25]], note: "Pre-war canned meat. Still edible, mostly." },
+    ],
+    misc: [
+      { name: "Holotape: Reservoir survey", stats: [["Length", "2 min"], ["Weight", 0], ["Value", 0]], note: "Kessler's notes on the pump house. Play it from the Data tab." },
+      { name: "Bobby Pin", qty: 14, stats: [["Weight", 0], ["Value", 1]], note: "For picking locks. Expect to break a few." },
+      { name: "Settlement Ledger", stats: [["Pages", 46], ["Weight", .5], ["Value", 5]], note: "Who owes what to whom in Hollow Creek." },
+      { name: "Sealed Letter", stats: [["Weight", 0], ["Value", 0]], note: "Addressed to the Vault 59 Overseer. Quest item." },
+    ],
+    junk: [
+      { name: "Copper Wire", qty: 12, stats: [["Scrap", "Copper"], ["Weight", .1], ["Value", 2]], note: "Used in lights and power conduits." },
+      { name: "Duct Tape", qty: 3, stats: [["Scrap", "Adhesive, cloth"], ["Weight", .1], ["Value", 8]], note: "Fixes nearly everything, for a while." },
+      { name: "Desk Fan", stats: [["Scrap", "Gear, screw, steel"], ["Weight", 2], ["Value", 6]], note: "Scrap it at a workbench for gears." },
+      { name: "Aluminum Can", qty: 9, stats: [["Scrap", "Aluminum"], ["Weight", .5], ["Value", 1]], note: "Light and plentiful." },
+      { name: "Toy Rocket", stats: [["Scrap", "Steel, spring"], ["Weight", 1], ["Value", 10]], note: "Wind-up. The spring still works." },
+    ],
+    ammo: [
+      { name: "10mm Round", qty: 64, stats: [["For", "10mm Pistol"], ["Weight", 0], ["Value", 1]], note: "Common across the region." },
+      { name: ".38 Round", qty: 112, stats: [["For", "Pipe weapons"], ["Weight", 0], ["Value", 1]], note: "Cheap and everywhere." },
+      { name: ".308 Round", qty: 22, stats: [["For", "Hunting Rifle"], ["Weight", 0], ["Value", 3]], note: "Keep these for long shots." },
+      { name: "Fusion Cell", qty: 40, stats: [["For", "Laser Pistol"], ["Weight", 0], ["Value", 2]], note: "Rechargeable at a settlement generator." },
+      { name: "Shotgun Shell", qty: 18, stats: [["For", "Shotguns"], ["Weight", 0], ["Value", 2]], note: "You don't own a shotgun yet. Trade these." },
+    ],
+  };
+  const QUESTS = [
+    { name: "Static on the Long Wire", text: "A looping distress call comes from the relay tower west of Hollow Creek. Someone keeps re-recording it.",
+      objectives: [["Tune the Pip-Boy to Emergency Band 7", true], ["Find the relay tower", true], ["Reach the top of the tower", false], ["Optional: find who recorded the message", false]] },
+    { name: "The Dry Reservoir", text: "Water pressure at the settlement has dropped by half since spring. Kessler thinks the pump house is clogged.",
+      objectives: [["Talk to Kessler at the water pump", true], ["Inspect the pump house", false], ["Repair the intake valve with 2 steel and 1 gear", false]] },
+    { name: "A Letter for the Overseer", text: "A sealed letter for the Vault 59 Overseer turned up in a mailbag on the old highway.",
+      objectives: [["Deliver the letter to Vault 59", false]] },
+    { name: "Odd jobs", text: "Small favors picked up around Hollow Creek.",
+      objectives: [["Clear the rats from the cellar", true], ["Bring 3 Purified Water to Dana", false]] },
+  ];
+  const STATIONS = [
+    { name: "Hollow Creek Relay", mhz: "98.4", wave: { freq: 3, amp: .8 }, note: "Settlement news on the hour, records in between." },
+    { name: "Emergency Band 7", mhz: "91.7", wave: { freq: 7, amp: .5 }, note: "A distress call on a loop. It started three days ago." },
+    { name: "Long Wire Swing", mhz: "103.9", wave: { freq: 2, amp: .95 }, note: "Pre-war swing, played by someone who never talks." },
+    { name: "Vault 59 Bulletin", mhz: "88.2", wave: { freq: 5, amp: .65 }, note: "Residency news and the daily water ration." },
+    { name: "Unknown signal", mhz: "107.5", wave: { freq: 11, amp: .28 }, note: "Numbers read aloud in a flat voice. Nobody knows who sends them." },
+  ];
+
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const make = (tag, props = {}, ...children) => {
+    const el = Object.assign(document.createElement(tag), props);
+    el.append(...children);
+    return el;
+  };
+
+  const option = (label, { selected = false, equipped = false, qty, meta } = {}) => {
+    const li = make("li", {}, make("span", { className: "pip-list__mark" }), label);
+    li.setAttribute("role", "option");
+    li.setAttribute("aria-selected", String(selected));
+    li.tabIndex = selected ? 0 : -1;
+    if (equipped) { li.dataset.equipped = ""; li.append(make("span", { className: "pip-sr", textContent: " (equipped)" })); }
+    if (qty) li.append(" ", make("span", { className: "pip-list__qty", textContent: `(${qty})` }));
+    if (meta) li.append(meta);
+    return li;
+  };
+  const readout = (rows) => make("dl", { className: "pip-readout" },
+    ...rows.map(([k, v]) => make("div", {}, make("dt", { textContent: k }), make("dd", { textContent: v }))));
+  const rank = (have, max) => {
+    const el = make("span", { className: "kit-rank" });
+    el.setAttribute("aria-label", `Rank ${have} of ${max}`);
+    for (let i = 0; i < max; i++) el.append(make("i", { className: i < have ? "on" : "" }));
+    return el;
+  };
+
+  /* Render lists before pipboy.js wires them on DOMContentLoaded ---------- */
+  const specialList = $("#special-list");
+  SPECIAL.forEach(([name, value], i) =>
+    specialList.append(option(name, { selected: i === 0, meta: make("span", { className: "pip-list__meta", textContent: value }) })));
+  const showSpecial = (i) => {
+    const [name, value, text] = SPECIAL[i];
+    const meter = make("div", { className: "pip-meter pip-meter--seg" },
+      make("span", { className: "pip-meter__track" }, make("span", { className: "pip-meter__fill" })));
+    meter.setAttribute("role", "meter");
+    meter.setAttribute("aria-label", `${name} ${value} of 10`);
+    meter.setAttribute("aria-valuemin", "0");
+    meter.setAttribute("aria-valuemax", "10");
+    $("#special-detail").replaceChildren(
+      make("span", { className: "kit-detail__big", textContent: value }),
+      make("h3", { className: "pip-h3", textContent: name }), meter, make("p", { textContent: text }));
+    Pip.setMeter(meter, value);
+  };
+
+  const perkList = $("#perk-list");
+  PERKS.forEach(([name, have, max], i) =>
+    perkList.append(option(name, { selected: i === 0, meta: make("span", { className: "pip-list__meta" }, rank(have, max)) })));
+  const showPerk = (i) => {
+    const [name, have, max, text] = PERKS[i];
+    $("#perk-detail").replaceChildren(make("h3", { className: "pip-h3", textContent: name }),
+      rank(have, max), make("p", { textContent: text }));
+  };
+
+  const invList = $("#inv-list");
+  let invCat = "weapons";
+  const showItem = (item) => {
+    $("#inv-detail").replaceChildren(make("h3", { className: "pip-h3", textContent: item.name }),
+      readout(item.stats), make("p", { textContent: item.note }));
+  };
+  const renderInv = (cat) => {
+    invCat = cat;
+    invList.replaceChildren(...INV[cat].map((item, i) =>
+      option(item.name, { selected: i === 0, equipped: item.equipped, qty: item.qty })));
+    showItem(INV[cat][0]);
+  };
+  renderInv("weapons");
+
+  const questList = $("#quest-list");
+  QUESTS.forEach((q, i) => questList.append(option(q.name, { selected: i === 0, equipped: i === 0 })));
+  const showQuest = (i) => {
+    const q = QUESTS[i];
+    const list = make("ul", { className: "kit-objectives" },
+      ...q.objectives.map(([text, done]) => {
+        const li = make("li", { className: done ? "done" : "", textContent: text });
+        if (done) li.append(make("span", { className: "pip-sr", textContent: " (done)" }));
+        return li;
+      }));
+    $("#quest-detail").replaceChildren(make("h3", { className: "pip-h3", textContent: q.name }),
+      make("p", { textContent: q.text }), list);
+  };
+
+  const stationList = $("#station-list");
+  let playing = 0;
+  STATIONS.forEach((s, i) => stationList.append(option(s.name, { selected: i === 0, equipped: i === 0 })));
+
+  showSpecial(0);
+  showPerk(0);
+  showQuest(0);
+
+  /* Boot text ------------------------------------------------------------- */
+  const bootLines = () => {
+    const tube = Pip.TUBES[document.documentElement.dataset.phosphor] || Pip.TUBES.p1;
+    return [
+      "*************** PIP-OS V7.1.0.8 ***************",
+      "",
+      "LOADER V1.1",
+      "EXEC VERSION 41.10",
+      "64K RAM SYSTEM",
+      "38911 BYTES FREE",
+      "NO HOLOTAPE FOUND",
+      "LOAD ROM(1): INTERFACE KIT 1.0",
+      `TUBE: ${tube.name} ${tube.color.toUpperCase()}, ${tube.nm.toUpperCase()}`,
+    ];
+  };
+
+  /* Wire up after pipboy.js has initialised ------------------------------- */
+  document.addEventListener("DOMContentLoaded", () => {
+    const device = $("#device");
+    const screen = $("#pipboy");
+    const boot = $("#boot");
+    const bootTerm = $("#boot-term");
+
+    specialList.addEventListener("pip:select", (e) => showSpecial(e.detail.index));
+    perkList.addEventListener("pip:select", (e) => showPerk(e.detail.index));
+    questList.addEventListener("pip:select", (e) => showQuest(e.detail.index));
+    invList.addEventListener("pip:select", (e) => showItem(INV[invCat][e.detail.index]));
+    $("#inv-cats").addEventListener("pip:tab", (e) => renderInv(e.detail.tab.dataset.cat));
+
+    const scope = Pip.scope($("#scope"));
+    const tune = (i) => {
+      playing = i;
+      const s = STATIONS[i];
+      [...stationList.children].forEach((li, n) => {
+        li.toggleAttribute("data-equipped", n === i);
+      });
+      $("#station-note").textContent = s.note;
+      $("#station-freq").textContent = `${s.mhz} MHz`;
+      scope.set(s.wave);
+    };
+    stationList.addEventListener("pip:select", (e) => tune(e.detail.index));
+    $("#radio-volume").addEventListener("input", (e) => {
+      const amp = STATIONS[playing].wave.amp * (Number(e.target.value) / 7);
+      scope.set({ amp: Math.min(1.1, amp) });
+    });
+    tune(0);
+
+    document.querySelectorAll("#pipboy [data-pip-map]").forEach((map) =>
+      map.addEventListener("pip:marker", (e) => { $("#map-note").textContent = e.detail.marker.dataset.note; }));
+
+    // Clock: today's date, two hundred and some years on.
+    const tick = () => {
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      const date = `${pad(now.getMonth() + 1)}.${pad(now.getDate())}.2287`;
+      const time = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      document.querySelectorAll('[data-clock="date"]').forEach((el) => { el.textContent = date; });
+      document.querySelectorAll('[data-clock="time"]').forEach((el) => { el.textContent = time; });
+    };
+    tick();
+    setInterval(tick, 15000);
+
+    // Power cycle with the boot text.
+    let busy = false;
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const powerCycle = async () => {
+      if (busy) return;
+      busy = true;
+      await Pip.power(device, "off");
+      screen.hidden = true;
+      bootTerm.replaceChildren(...bootLines().map((t) => make("p", { className: "pip-terminal__line", textContent: t })));
+      boot.hidden = false;
+      Pip.power(device, "on");
+      await Pip.type(bootTerm, { cps: 160 });
+      await wait(650);
+      boot.hidden = true;
+      screen.hidden = false;
+      busy = false;
+    };
+    $("#power-cycle").addEventListener("click", powerCycle);
+    document.addEventListener("keydown", (e) => {
+      if (e.key.toLowerCase() !== "p" || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.target.closest("input, textarea, select, [contenteditable]")) return;
+      powerCycle();
+    });
+    Pip.power(device, "on");
+
+    /* Docs demos ---------------------------------------------------------- */
+    const syncTubeCards = () => {
+      const id = document.documentElement.dataset.phosphor;
+      document.querySelectorAll("[data-set-tube]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.setTube === id)));
+    };
+    $("#tube-cards").addEventListener("click", (e) => {
+      const card = e.target.closest("[data-set-tube]");
+      if (card) Pip.setPhosphor(card.dataset.setTube);
+    });
+    document.addEventListener("pip:phosphor", syncTubeCards);
+    syncTubeCards();
+
+    $("#fx-replay").addEventListener("click", () => Pip.power($("#fx-screen"), "on"));
+
+    $("#demo-scrap").addEventListener("pip:confirm", () =>
+      Pip.toast({ title: "Scrapped", body: "Desk fan: 1 gear, 2 screws, 1 steel", icon: "+" }));
+
+    const demoList = $("#demo-list");
+    const equippedIn = (slot) => demoList.querySelector(`[data-equipped][data-slot="${slot}"]`);
+    demoList.addEventListener("pip:select", (e) => {
+      const o = e.detail.option;
+      const dr = Number(o.dataset.dr);
+      const current = equippedIn(o.dataset.slot);
+      const dd = make("dd", { textContent: dr });
+      if (current && current !== o) {
+        const diff = dr - Number(current.dataset.dr);
+        if (diff) dd.append(make("span", { className: `pip-delta pip-delta--${diff > 0 ? "up" : "down"}`, textContent: (diff > 0 ? "+" : "") + diff }));
+      }
+      $("#demo-readout").replaceChildren(
+        make("div", {}, make("dt", { textContent: "Damage resist" }), dd),
+        make("div", {}, make("dt", { textContent: "Weight" }), make("dd", { textContent: o.dataset.wg })),
+        make("div", {}, make("dt", { textContent: "Value" }), make("dd", { textContent: o.dataset.val })));
+    });
+
+    const TOASTS = {
+      quest: { title: "Quest added", body: "The Dry Reservoir", icon: "!" },
+      xp: { title: "Experience", body: "+25 XP: Locked terminal", icon: "+" },
+      item: { title: "Item added", body: "Stimpak (3)", icon: "S" },
+    };
+    document.querySelectorAll("[data-toast]").forEach((b) =>
+      b.addEventListener("click", () => Pip.toast(TOASTS[b.dataset.toast])));
+
+    let coreEquipped = true;
+    $("#demo-confirm").addEventListener("click", async () => {
+      if (!coreEquipped) {
+        coreEquipped = true;
+        $("#demo-confirm-result").textContent = "Fusion core: equipped";
+        $("#demo-confirm").lastChild.textContent = " Drop fusion core";
+        return;
+      }
+      const drop = await Pip.confirm({
+        title: "Drop the fusion core?",
+        body: "Your power armor can't move without it.",
+        confirmLabel: "Drop it",
+        cancelLabel: "Keep it",
+        danger: true,
+      });
+      if (!drop) return;
+      coreEquipped = false;
+      $("#demo-confirm-result").textContent = "Fusion core: on the ground";
+      $("#demo-confirm").lastChild.textContent = " Pick it back up";
+      Pip.toast({ title: "Item removed", body: "Fusion core", icon: "-" });
+    });
+
+    const compass = Pip.compass($("#demo-compass"));
+    $("#heading").addEventListener("input", (e) => compass.set(e.target.value));
+    const demoScope = Pip.scope($("#demo-scope"));
+    $("#scope-freq").addEventListener("input", (e) => demoScope.set({ freq: Number(e.target.value) }));
+
+    // Terminal: type when it scrolls into view, then accept commands.
+    const term = $("#demo-terminal");
+    const menu = $(".pip-terminal__menu", term);
+    const out = $(".pip-terminal__out", term);
+    const prompt = $(".pip-terminal__prompt", term);
+    const ENTRIES = {
+      pressure: ["PRESSURE AT SETTLEMENT TAP", "Day 38: 44 psi", "Day 39: 39 psi", "Day 40: 35 psi", "Day 41: 31 psi"],
+      valve: ["INTAKE VALVE, NIGHT SHIFT", "Silt is packing the screen again.", "Need two steel and a gear before it seizes."],
+      hatch: ["MAINTENANCE HATCH", "Hatch unlocked. Workbench access granted."],
+      help: ["COMMANDS", "HELP     this list", "STATUS   pump summary", "CLEAR    clear the screen"],
+      status: ["PUMP 2: RUNNING AT 52%", "Output 22 units a day. Need 28."],
+    };
+    const print = (lines) => out.replaceChildren(...lines.map((t) => make("p", { textContent: t })));
+    menu.hidden = true;
+    prompt.hidden = true;
+    let typed = false;
+    const startTerminal = () => {
+      if (typed) return;
+      typed = true;
+      Pip.type(term).then(() => { menu.hidden = false; prompt.hidden = false; });
+    };
+    if ("IntersectionObserver" in window) {
+      const io = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) { startTerminal(); io.disconnect(); } }, { threshold: .4 });
+      io.observe(term);
+    } else startTerminal();
+    menu.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-entry]");
+      if (btn) print(ENTRIES[btn.dataset.entry]);
+    });
+    $("#term-input").addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      const cmd = e.target.value.trim().toLowerCase();
+      e.target.value = "";
+      if (!cmd) return;
+      if (cmd === "clear") { out.replaceChildren(); return; }
+      print(ENTRIES[cmd] || [`>${cmd.toUpperCase()}`, "Unknown command. Type HELP for a list."]);
+    });
+
+    const hack = $("#demo-hack");
+    hack.addEventListener("pip:unlocked", () => Pip.toast({ title: "Terminal unlocked", body: "+15 XP: Easy terminal", icon: "+" }));
+    hack.addEventListener("pip:locked", () => Pip.toast({ title: "Terminal locked", body: "Reset it to try again", icon: "!" }));
+
+    // Copy buttons on the markup blocks.
+    document.addEventListener("click", async (e) => {
+      const btn = e.target.closest(".kit-copy");
+      if (!btn) return;
+      try {
+        await navigator.clipboard.writeText(btn.dataset.code);
+        Pip.toast({ title: "Copied", body: "Markup is on your clipboard", icon: "+", timeout: 2200 });
+      } catch {
+        const range = document.createRange();
+        range.selectNodeContents(btn.nextElementSibling);
+        const sel = getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        Pip.toast({ title: "Selected", body: "Press Ctrl+C to copy", icon: "!", timeout: 2600 });
+      }
+    });
+
+    // Highlight the current section in the index.
+    const links = [...document.querySelectorAll(".kit-index a")];
+    const byId = new Map(links.map((a) => [a.hash.slice(1), a]));
+    if ("IntersectionObserver" in window) {
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          links.forEach((a) => a.removeAttribute("aria-current"));
+          byId.get(entry.target.id)?.setAttribute("aria-current", "true");
+        });
+      }, { rootMargin: "-30% 0px -60% 0px" });
+      document.querySelectorAll(".kit-section").forEach((s) => io.observe(s));
+    }
+  });
+})();
+</script>
+</body>
+</html>
